@@ -1,10 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- 主题色 - 苹果风格蓝色 -->
+    <color name="primary">#007AFF</color>
+    <color name="primary_variant">#0056B3</color>
+    <color name="primary_dark">#004499</color>
+    <color name="on_primary">#FFFFFF</color>
+    
+    <!-- 次要色 -->
+    <color name="secondary">#5AC8FA</color>
+    <color name="secondary_variant">#34AADC</color>
+    <color name="on_secondary">#000000</color>
+    
+    <!-- 背景色 - 苹果浅灰色 -->
+    <color name="background">#F2F2F7</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_background">#1C1C1E</color>
+    <color name="on_surface">#1C1C1E</color>
+    
+    <!-- 收支颜色 - 苹果系统色 -->
+    <color name="income_green">#34C759</color>
+    <color name="income_green_light">#E8F8EC</color>
+    <color name="expense_red">#FF3B30</color>
+    <color name="expense_red_light">#FFEDED</color>
+    <color name="balance_blue">#007AFF</color>
+    <color name="balance_blue_light">#E5F1FF</color>
+    
+    <!-- 文字颜色 - 苹果风格 -->
+    <color name="text_primary">#1C1C1E</color>
+    <color name="text_secondary">#8E8E93</color>
+    <color name="text_hint">#AEAEB2</color>
+    
+    <!-- 分割线颜色 -->
+    <color name="divider">#E5E5EA</color>
+    
+    <!-- 底部导航 -->
+    <color name="nav_item_selected">#007AFF</color>
+    <color name="nav_item_unselected">#8E8E93</color>
+    
+    <!-- 图表颜色 -->
+    <color name="chart_blue">#007AFF</color>
+    <color name="chart_green">#34C759</color>
+    <color name="chart_orange">#FF9500</color>
+    <color name="chart_red">#FF3B30</color>
+    <color name="chart_purple">#AF52DE</color>
+    <color name="chart_pink">#FF2D55</color>
+    <color name="chart_teal">#5AC8FA</color>
+    <color name="chart_yellow">#FFCC00</color>
+    
+    <!-- Material 主题色 -->
+    <color name="md_theme_primary">#007AFF</color>
+    <color name="md_theme_secondary">#5AC8FA</color>
+    <color name="md_theme_tertiary">#AF52DE</color>
+    <color name="md_theme_error">#FF3B30</color>
 </resources>

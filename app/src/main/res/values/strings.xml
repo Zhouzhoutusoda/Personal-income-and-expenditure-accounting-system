@@ -1,3 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">presonal income -expenditure accounting system</string>
+    <string name="app_name">个人记账</string>
+    
+    <!-- 底部导航 -->
+    <string name="nav_record">记账</string>
+    <string name="nav_history">记录</string>
+    <string name="nav_statistics">统计</string>
+    <string name="nav_settings">设置</string>
+    
+    <!-- 页面标题 -->
+    <string name="title_record">记一笔</string>
+    <string name="title_history">收支记录</string>
+    <string name="title_statistics">收支统计</string>
+    <string name="title_settings">设置</string>
+    
+    <!-- 通用 -->
+    <string name="income">收入</string>
+    <string name="expense">支出</string>
+    <string name="balance">结余</string>
+    <string name="total">合计</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="confirm">确认</string>
+    <string name="all">全部</string>
+    
+    <!-- 记账相关 -->
+    <string name="amount_hint">请输入金额</string>
+    <string name="note_hint">添加备注（可选）</string>
+    <string name="select_category">选择类别</string>
+    <string name="select_date">选择日期</string>
+    <string name="select_account">选择账本</string>
+    
+    <!-- 空状态 -->
+    <string name="empty_records">暂无记录</string>
+    <string name="empty_records_hint">点击下方按钮开始记账吧</string>
+    
+    <!-- 历史记录 -->
+    <string name="search_hint">搜索记录...</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_expense">支出</string>
+    <string name="filter_income">收入</string>
+    <string name="delete_record_title">删除记录</string>
+    <string name="delete_record_message">确定要删除这条记录吗？此操作无法撤销。</string>
+    
+    <!-- 统计相关 -->
+    <string name="monthly_balance">本月结余</string>
+    <string name="total_income">总收入</string>
+    <string name="total_expense">总支出</string>
+    <string name="record_count">记录数</string>
+    <string name="record_count_format">%d 笔</string>
+    <string name="income_expense_trend">收支趋势</string>
+    <string name="expense_category_distribution">支出分类</string>
+    <string name="income_category_distribution">收入分类</string>
+    <string name="this_week">本周</string>
+    <string name="this_month">本月</string>
+    <string name="this_year">今年</string>
+    <string name="prev_month">上个月</string>
+    <string name="next_month">下个月</string>
+    <string name="total_amount_format">%s\n%s</string>
+    <string name="daily_average">日均</string>
+    <string name="no_data">暂无数据</string>
+    
+    <!-- 设置相关 -->
+    <string name="data_management">数据管理</string>
+    <string name="backup_data">备份数据</string>
+    <string name="backup_data_desc">导出数据到本地文件</string>
+    <string name="restore_data">恢复数据</string>
+    <string name="restore_data_desc">从备份文件恢复数据</string>
+    <string name="clear_data">清空数据</string>
+    <string name="clear_data_desc">删除所有记账数据</string>
+    <string name="about">关于应用</string>
+    <string name="version">版本 %s</string>
+    
+    <!-- 提示消息 -->
+    <string name="save_success">保存成功</string>
+    <string name="save_failed">保存失败</string>
+    <string name="delete_success">删除成功</string>
+    <string name="delete_failed">删除失败</string>
+    <string name="backup_success">备份成功</string>
+    <string name="backup_failed">备份失败</string>
+    <string name="restore_success">恢复成功</string>
+    <string name="restore_failed">恢复失败</string>
+    <string name="clear_success">清空成功</string>
+    <string name="clear_failed">清空失败</string>
+    <string name="amount_error">请输入有效金额</string>
+    <string name="category_error">请选择类别</string>
 </resources>

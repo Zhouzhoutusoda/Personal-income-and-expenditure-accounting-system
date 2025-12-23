@@ -16,9 +16,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // JitPack 仓库 (用于 MPAndroidChart)
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "presonal income -expenditure accounting system"
 include(":app")
- 
