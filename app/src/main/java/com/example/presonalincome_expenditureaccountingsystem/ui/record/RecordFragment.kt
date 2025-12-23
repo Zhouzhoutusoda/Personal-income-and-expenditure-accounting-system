@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import androidx.core.content.ContextCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -21,9 +22,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.presonalincome_expenditureaccountingsystem.R
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
+import com.example.presonalincome_expenditureaccountingsystem.databinding.DialogQuickRecordBinding
 import com.example.presonalincome_expenditureaccountingsystem.databinding.FragmentRecordBinding
 import com.example.presonalincome_expenditureaccountingsystem.ui.adapter.CategoryAdapter
 import com.example.presonalincome_expenditureaccountingsystem.util.DateUtils
+import com.example.presonalincome_expenditureaccountingsystem.util.SmartRecordParser
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -68,6 +72,7 @@ class RecordFragment : Fragment() {
         setupTypeToggle()
         setupAmountInput()
         setupQuickAmountChips()
+        setupQuickRecordButton()
         setupCategoryGrid()
         setupDatePicker()
         setupSaveButton()
@@ -176,6 +181,159 @@ class RecordFragment : Fragment() {
         binding.etAmount.setText(String.format("%.2f", amount))
         binding.etAmount.setSelection(binding.etAmount.text?.length ?: 0)
         hideAmountError()
+    }
+    
+    /**
+     * 设置快速记账按钮
+     */
+    private fun setupQuickRecordButton() {
+        binding.btnQuickRecord.setOnClickListener {
+            showQuickRecordDialog()
+        }
+    }
+    
+    /**
+     * 显示快速记账对话框
+     */
+    private fun showQuickRecordDialog() {
+        val dialogBinding = DialogQuickRecordBinding.inflate(layoutInflater)
+        
+        var currentParseResult: SmartRecordParser.ParseResult? = null
+        
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(dialogBinding.root)
+            .create()
+        
+        // 设置示例点击
+        dialogBinding.chipExample1.setOnClickListener {
+            dialogBinding.etInput.setText("午饭20元")
+        }
+        dialogBinding.chipExample2.setOnClickListener {
+            dialogBinding.etInput.setText("打车35块")
+        }
+        dialogBinding.chipExample3.setOnClickListener {
+            dialogBinding.etInput.setText("收到工资8000")
+        }
+        
+        // 实时解析输入
+        dialogBinding.etInput.addTextChangedListener { text ->
+            if (text.isNullOrBlank()) {
+                dialogBinding.cardPreview.visibility = View.GONE
+                dialogBinding.cardError.visibility = View.GONE
+                dialogBinding.btnConfirm.isEnabled = false
+                currentParseResult = null
+            } else {
+                // 实时解析
+                val result = SmartRecordParser.parse(text.toString())
+                currentParseResult = result
+                
+                if (result.isValid()) {
+                    // 显示解析结果
+                    dialogBinding.cardPreview.visibility = View.VISIBLE
+                    dialogBinding.cardError.visibility = View.GONE
+                    dialogBinding.btnConfirm.isEnabled = true
+                    
+                    val previewText = buildString {
+                        append("金额: ¥${String.format("%.2f", result.amount)}")
+                        append("  |  类型: ${if (result.isExpense) "支出" else "收入"}")
+                        if (result.categoryName != null) {
+                            append("\n类别: ${result.categoryName}")
+                        }
+                        if (result.note.isNotEmpty()) {
+                            append("\n备注: ${result.note}")
+                        }
+                    }
+                    dialogBinding.tvPreview.text = previewText
+                    
+                    // 根据收入/支出设置颜色
+                    if (result.isExpense) {
+                        dialogBinding.cardPreview.setCardBackgroundColor(
+                            ContextCompat.getColor(requireContext(), R.color.expense_red_light)
+                        )
+                        dialogBinding.cardPreview.strokeColor = 
+                            ContextCompat.getColor(requireContext(), R.color.expense_red)
+                    } else {
+                        dialogBinding.cardPreview.setCardBackgroundColor(
+                            ContextCompat.getColor(requireContext(), R.color.income_green_light)
+                        )
+                        dialogBinding.cardPreview.strokeColor = 
+                            ContextCompat.getColor(requireContext(), R.color.income_green)
+                    }
+                } else {
+                    // 无法识别
+                    dialogBinding.cardPreview.visibility = View.GONE
+                    dialogBinding.cardError.visibility = View.VISIBLE
+                    dialogBinding.btnConfirm.isEnabled = false
+                }
+            }
+        }
+        
+        // 取消按钮
+        dialogBinding.btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        // 确认按钮
+        dialogBinding.btnConfirm.setOnClickListener {
+            currentParseResult?.let { result ->
+                if (result.isValid()) {
+                    // 应用解析结果到表单
+                    applyQuickRecordResult(result)
+                    dialog.dismiss()
+                }
+            }
+        }
+        
+        dialog.show()
+    }
+    
+    /**
+     * 应用快速记账结果到表单
+     */
+    private fun applyQuickRecordResult(result: SmartRecordParser.ParseResult) {
+        Log.d(TAG, "应用快速记账结果: ${result.getSummary()}")
+        
+        // 1. 设置收入/支出类型
+        if (result.isExpense) {
+            binding.toggleType.check(R.id.btn_expense)
+        } else {
+            binding.toggleType.check(R.id.btn_income)
+        }
+        
+        // 2. 设置金额
+        result.amount?.let { amount ->
+            binding.etAmount.setText(String.format("%.2f", amount))
+        }
+        
+        // 3. 设置日期
+        selectedDate.timeInMillis = result.date
+        updateDateDisplay()
+        
+        // 4. 设置备注
+        if (result.note.isNotEmpty()) {
+            binding.etNote.setText(result.note)
+        }
+        
+        // 5. 尝试匹配类别
+        result.categoryName?.let { categoryName ->
+            val categories = if (result.isExpense) {
+                viewModel.expenseCategories.value
+            } else {
+                viewModel.incomeCategories.value
+            }
+            
+            val matchedCategory = categories.find { it.name == categoryName }
+            if (matchedCategory != null) {
+                viewModel.selectCategory(matchedCategory)
+                categoryAdapter.setSelectedCategory(matchedCategory.id)
+            }
+        }
+        
+        // 6. 清除快捷金额选中状态
+        binding.chipGroupAmount.clearCheck()
+        
+        hideAmountError()
+        hideCategoryError()
     }
     
     /**
