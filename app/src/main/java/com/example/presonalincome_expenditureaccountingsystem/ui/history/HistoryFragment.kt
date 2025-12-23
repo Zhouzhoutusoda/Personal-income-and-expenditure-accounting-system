@@ -62,6 +62,7 @@ class HistoryFragment : Fragment() {
 
         setupRecyclerView()
         setupSwipeRefresh()
+        setupTimeRangeSelector()
         setupMonthNavigation()
         setupSearch()
         setupFilter()
@@ -181,6 +182,28 @@ class HistoryFragment : Fragment() {
         
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
+        }
+    }
+    
+    /**
+     * 设置时间范围选择器
+     */
+    private fun setupTimeRangeSelector() {
+        binding.chipGroupTimeRange.setOnCheckedStateChangeListener { _, checkedIds ->
+            val timeRange = when {
+                checkedIds.contains(R.id.chip_month) -> HistoryViewModel.TIME_RANGE_MONTH
+                checkedIds.contains(R.id.chip_year) -> HistoryViewModel.TIME_RANGE_YEAR
+                checkedIds.contains(R.id.chip_all_time) -> HistoryViewModel.TIME_RANGE_ALL
+                else -> HistoryViewModel.TIME_RANGE_MONTH
+            }
+            viewModel.setTimeRangeType(timeRange)
+            
+            // 全部模式下隐藏导航按钮
+            binding.layoutTimeNavigation.visibility = if (timeRange == HistoryViewModel.TIME_RANGE_ALL) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
         }
     }
     

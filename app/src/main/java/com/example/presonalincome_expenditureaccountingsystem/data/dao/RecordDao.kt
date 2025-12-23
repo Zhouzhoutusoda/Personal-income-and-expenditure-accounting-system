@@ -141,6 +141,18 @@ interface RecordDao {
     suspend fun getTotalExpense(startDate: Long, endDate: Long): Double
     
     /**
+     * 获取全部总收入
+     */
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM records WHERE type = 1")
+    suspend fun getTotalIncomeAll(): Double
+    
+    /**
+     * 获取全部总支出
+     */
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM records WHERE type = 0")
+    suspend fun getTotalExpenseAll(): Double
+    
+    /**
      * 获取指定账本在日期范围内的总收入
      */
     @Query("""

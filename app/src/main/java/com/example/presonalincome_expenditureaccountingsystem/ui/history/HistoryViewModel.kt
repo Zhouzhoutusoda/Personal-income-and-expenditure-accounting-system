@@ -26,6 +26,11 @@ class HistoryViewModel : ViewModel() {
         const val FILTER_ALL = 0
         const val FILTER_EXPENSE = 1
         const val FILTER_INCOME = 2
+        
+        // 时间范围类型
+        const val TIME_RANGE_MONTH = 0   // 按月
+        const val TIME_RANGE_YEAR = 1    // 按年
+        const val TIME_RANGE_ALL = 2     // 全部
     }
     
     private val recordRepository = AccountingApplication.recordRepository
@@ -34,9 +39,13 @@ class HistoryViewModel : ViewModel() {
     private var currentYear = Calendar.getInstance().get(Calendar.YEAR)
     private var currentMonth = Calendar.getInstance().get(Calendar.MONTH)
     
-    // 月份显示
-    private val _monthDisplay = MutableStateFlow("")
-    val monthDisplay: StateFlow<String> = _monthDisplay.asStateFlow()
+    // 时间范围类型
+    private val _timeRangeType = MutableStateFlow(TIME_RANGE_MONTH)
+    val timeRangeType: StateFlow<Int> = _timeRangeType.asStateFlow()
+    
+    // 时间显示
+    private val _timeDisplay = MutableStateFlow("")
+    val timeDisplay: StateFlow<String> = _timeDisplay.asStateFlow()
     
     // 当前筛选类型
     private val _filterType = MutableStateFlow(FILTER_ALL)
@@ -53,12 +62,16 @@ class HistoryViewModel : ViewModel() {
     private val _records = MutableStateFlow<List<RecordWithCategory>>(emptyList())
     val records: StateFlow<List<RecordWithCategory>> = _records.asStateFlow()
     
-    // 月度统计
-    private val _monthlyIncome = MutableStateFlow(0.0)
-    val monthlyIncome: StateFlow<Double> = _monthlyIncome.asStateFlow()
+    // 统计数据
+    private val _totalIncome = MutableStateFlow(0.0)
+    val totalIncome: StateFlow<Double> = _totalIncome.asStateFlow()
     
-    private val _monthlyExpense = MutableStateFlow(0.0)
-    val monthlyExpense: StateFlow<Double> = _monthlyExpense.asStateFlow()
+    private val _totalExpense = MutableStateFlow(0.0)
+    val totalExpense: StateFlow<Double> = _totalExpense.asStateFlow()
+    
+    // 兼容旧的命名
+    val monthlyIncome: StateFlow<Double> = _totalIncome
+    val monthlyExpense: StateFlow<Double> = _totalExpense
     
     // 加载状态
     private val _isLoading = MutableStateFlow(false)
@@ -68,59 +81,111 @@ class HistoryViewModel : ViewModel() {
     private val _hasSearchResult = MutableStateFlow(true)
     val hasSearchResult: StateFlow<Boolean> = _hasSearchResult.asStateFlow()
     
-    // 是否可以切换到下个月
+    // 是否可以切换到下一个时间段
     private val _canGoNext = MutableStateFlow(false)
     val canGoNext: StateFlow<Boolean> = _canGoNext.asStateFlow()
+    
+    // 兼容旧命名
+    val monthDisplay: StateFlow<String> = _timeDisplay
     
     private var loadJob: Job? = null
     
     init {
-        updateMonthDisplay()
+        updateTimeDisplay()
         loadRecords()
     }
     
     /**
-     * 更新月份显示
+     * 设置时间范围类型
      */
-    private fun updateMonthDisplay() {
-        val calendar = Calendar.getInstance()
-        calendar.set(currentYear, currentMonth, 1)
-        _monthDisplay.value = DateUtils.formatMonth(calendar.timeInMillis)
-        
-        // 判断是否可以切换到下个月
-        val now = Calendar.getInstance()
-        _canGoNext.value = currentYear < now.get(Calendar.YEAR) ||
-                (currentYear == now.get(Calendar.YEAR) && currentMonth < now.get(Calendar.MONTH))
+    fun setTimeRangeType(type: Int) {
+        _timeRangeType.value = type
+        updateTimeDisplay()
+        loadRecords()
     }
     
     /**
-     * 切换到上个月
+     * 更新时间显示
+     */
+    private fun updateTimeDisplay() {
+        when (_timeRangeType.value) {
+            TIME_RANGE_MONTH -> {
+                val calendar = Calendar.getInstance()
+                calendar.set(currentYear, currentMonth, 1)
+                _timeDisplay.value = DateUtils.formatMonth(calendar.timeInMillis)
+                
+                // 判断是否可以切换到下个月
+                val now = Calendar.getInstance()
+                _canGoNext.value = currentYear < now.get(Calendar.YEAR) ||
+                        (currentYear == now.get(Calendar.YEAR) && currentMonth < now.get(Calendar.MONTH))
+            }
+            TIME_RANGE_YEAR -> {
+                _timeDisplay.value = "${currentYear}年"
+                
+                // 判断是否可以切换到下一年
+                val now = Calendar.getInstance()
+                _canGoNext.value = currentYear < now.get(Calendar.YEAR)
+            }
+            TIME_RANGE_ALL -> {
+                _timeDisplay.value = "全部记录"
+                _canGoNext.value = false
+            }
+        }
+    }
+    
+    /**
+     * 切换到上一个时间段
      */
     fun previousMonth() {
-        currentMonth--
-        if (currentMonth < 0) {
-            currentMonth = 11
-            currentYear--
+        when (_timeRangeType.value) {
+            TIME_RANGE_MONTH -> {
+                currentMonth--
+                if (currentMonth < 0) {
+                    currentMonth = 11
+                    currentYear--
+                }
+            }
+            TIME_RANGE_YEAR -> {
+                currentYear--
+            }
+            TIME_RANGE_ALL -> {
+                // 全部模式不需要切换
+                return
+            }
         }
-        updateMonthDisplay()
+        updateTimeDisplay()
         loadRecords()
     }
     
     /**
-     * 切换到下个月
+     * 切换到下一个时间段
      */
     fun nextMonth() {
         val now = Calendar.getInstance()
-        if (currentYear < now.get(Calendar.YEAR) ||
-            (currentYear == now.get(Calendar.YEAR) && currentMonth < now.get(Calendar.MONTH))) {
-            currentMonth++
-            if (currentMonth > 11) {
-                currentMonth = 0
-                currentYear++
+        
+        when (_timeRangeType.value) {
+            TIME_RANGE_MONTH -> {
+                if (currentYear < now.get(Calendar.YEAR) ||
+                    (currentYear == now.get(Calendar.YEAR) && currentMonth < now.get(Calendar.MONTH))) {
+                    currentMonth++
+                    if (currentMonth > 11) {
+                        currentMonth = 0
+                        currentYear++
+                    }
+                }
             }
-            updateMonthDisplay()
-            loadRecords()
+            TIME_RANGE_YEAR -> {
+                if (currentYear < now.get(Calendar.YEAR)) {
+                    currentYear++
+                }
+            }
+            TIME_RANGE_ALL -> {
+                // 全部模式不需要切换
+                return
+            }
         }
+        updateTimeDisplay()
+        loadRecords()
     }
     
     /**
@@ -140,7 +205,7 @@ class HistoryViewModel : ViewModel() {
     }
     
     /**
-     * 加载当月记录
+     * 加载记录
      */
     fun loadRecords() {
         loadJob?.cancel()
@@ -148,8 +213,64 @@ class HistoryViewModel : ViewModel() {
             try {
                 _isLoading.value = true
                 
-                // 计算当月日期范围
-                val calendar = Calendar.getInstance()
+                // 计算日期范围
+                val (startDate, endDate) = calculateDateRange()
+                
+                Log.d(TAG, "----------------------------------------")
+                Log.d(TAG, "加载记录: ${_timeDisplay.value}")
+                Log.d(TAG, "  开始日期: ${if (startDate == 0L) "无限制" else DateUtils.formatDate(startDate)}")
+                Log.d(TAG, "  结束日期: ${if (endDate == Long.MAX_VALUE) "无限制" else DateUtils.formatDate(endDate)}")
+                
+                // 获取统计数据
+                val income: Double
+                val expense: Double
+                
+                if (_timeRangeType.value == TIME_RANGE_ALL) {
+                    income = recordRepository.getTotalIncomeAll()
+                    expense = recordRepository.getTotalExpenseAll()
+                } else {
+                    income = recordRepository.getTotalIncome(startDate, endDate)
+                    expense = recordRepository.getTotalExpense(startDate, endDate)
+                }
+                
+                _totalIncome.value = income
+                _totalExpense.value = expense
+                
+                Log.d(TAG, "统计数据:")
+                Log.d(TAG, "  - 收入: ¥$income")
+                Log.d(TAG, "  - 支出: ¥$expense")
+                Log.d(TAG, "  - 结余: ¥${income - expense}")
+                
+                // 收集 Flow 数据
+                val recordFlow = if (_timeRangeType.value == TIME_RANGE_ALL) {
+                    recordRepository.getAllRecordsWithCategory()
+                } else {
+                    recordRepository.getRecordsByDateRange(startDate, endDate)
+                }
+                
+                recordFlow.collect { recordList ->
+                    allRecords = recordList
+                    Log.d(TAG, "加载到 ${recordList.size} 条记录")
+                    
+                    applyFilters()
+                    _isLoading.value = false
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "加载记录失败: ${e.message}", e)
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    /**
+     * 计算日期范围
+     */
+    private fun calculateDateRange(): Pair<Long, Long> {
+        val calendar = Calendar.getInstance()
+        
+        return when (_timeRangeType.value) {
+            TIME_RANGE_MONTH -> {
                 calendar.set(currentYear, currentMonth, 1, 0, 0, 0)
                 calendar.set(Calendar.MILLISECOND, 0)
                 val startDate = calendar.timeInMillis
@@ -161,35 +282,22 @@ class HistoryViewModel : ViewModel() {
                 calendar.set(Calendar.MILLISECOND, 999)
                 val endDate = calendar.timeInMillis
                 
-                Log.d(TAG, "----------------------------------------")
-                Log.d(TAG, "加载记录: ${_monthDisplay.value}")
-                Log.d(TAG, "  开始日期: ${DateUtils.formatDate(startDate)}")
-                Log.d(TAG, "  结束日期: ${DateUtils.formatDate(endDate)}")
+                Pair(startDate, endDate)
+            }
+            TIME_RANGE_YEAR -> {
+                calendar.set(currentYear, Calendar.JANUARY, 1, 0, 0, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startDate = calendar.timeInMillis
                 
-                // 获取统计数据
-                val income = recordRepository.getTotalIncome(startDate, endDate)
-                val expense = recordRepository.getTotalExpense(startDate, endDate)
+                calendar.set(currentYear, Calendar.DECEMBER, 31, 23, 59, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val endDate = calendar.timeInMillis
                 
-                _monthlyIncome.value = income
-                _monthlyExpense.value = expense
-                
-                Log.d(TAG, "月度统计:")
-                Log.d(TAG, "  - 收入: ¥$income")
-                Log.d(TAG, "  - 支出: ¥$expense")
-                Log.d(TAG, "  - 结余: ¥${income - expense}")
-                
-                // 收集 Flow 数据
-                recordRepository.getRecordsByDateRange(startDate, endDate).collect { recordList ->
-                    allRecords = recordList
-                    Log.d(TAG, "加载到 ${recordList.size} 条记录")
-                    
-                    applyFilters()
-                    _isLoading.value = false
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "加载记录失败: ${e.message}", e)
-                _isLoading.value = false
+                Pair(startDate, endDate)
+            }
+            else -> {
+                // 全部记录
+                Pair(0L, Long.MAX_VALUE)
             }
         }
     }

@@ -71,6 +71,7 @@ class StatisticsFragment : Fragment() {
 
         Log.d(TAG, "StatisticsFragment 创建")
 
+        setupTimeRangeSelector()
         setupMonthNavigation()
         setupAccountSelector()
         setupRecyclerViews()
@@ -137,6 +138,60 @@ class StatisticsFragment : Fragment() {
             .show()
     }
 
+    /**
+     * 设置时间范围选择器
+     */
+    private fun setupTimeRangeSelector() {
+        binding.chipGroupTimeRange.setOnCheckedStateChangeListener { _, checkedIds ->
+            val timeRange = when {
+                checkedIds.contains(R.id.chip_month) -> StatisticsViewModel.TIME_RANGE_MONTH
+                checkedIds.contains(R.id.chip_year) -> StatisticsViewModel.TIME_RANGE_YEAR
+                checkedIds.contains(R.id.chip_all_time) -> StatisticsViewModel.TIME_RANGE_ALL
+                else -> StatisticsViewModel.TIME_RANGE_MONTH
+            }
+            viewModel.setTimeRangeType(timeRange)
+            
+            // 全部模式下隐藏导航按钮
+            binding.layoutTimeNavigation.visibility = if (timeRange == StatisticsViewModel.TIME_RANGE_ALL) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+            
+            // 更新标签文字
+            updateLabels(timeRange)
+        }
+    }
+    
+    /**
+     * 更新标签文字
+     */
+    private fun updateLabels(timeRange: Int) {
+        when (timeRange) {
+            StatisticsViewModel.TIME_RANGE_MONTH -> {
+                binding.tvBalanceLabel.text = "本月结余"
+                binding.tvDailyExpenseLabel.text = "日均支出"
+                binding.tvDailyIncomeLabel.text = "日均收入"
+                binding.tvExpenseEmptyHint.text = "本月暂无支出"
+                binding.tvIncomeEmptyHint.text = "本月暂无收入"
+            }
+            StatisticsViewModel.TIME_RANGE_YEAR -> {
+                binding.tvBalanceLabel.text = "本年结余"
+                binding.tvDailyExpenseLabel.text = "月均支出"
+                binding.tvDailyIncomeLabel.text = "月均收入"
+                binding.tvExpenseEmptyHint.text = "本年暂无支出"
+                binding.tvIncomeEmptyHint.text = "本年暂无收入"
+            }
+            StatisticsViewModel.TIME_RANGE_ALL -> {
+                binding.tvBalanceLabel.text = "总结余"
+                binding.tvDailyExpenseLabel.text = "年均支出"
+                binding.tvDailyIncomeLabel.text = "年均收入"
+                binding.tvExpenseEmptyHint.text = "暂无支出记录"
+                binding.tvIncomeEmptyHint.text = "暂无收入记录"
+            }
+        }
+    }
+    
     /**
      * 设置月份导航
      */
@@ -339,17 +394,34 @@ class StatisticsFragment : Fragment() {
                     }
                 }
 
-                // 观察支出天数
+                // 观察支出天数/月数/年数
                 launch {
-                    viewModel.expenseDays.collect { days ->
-                        binding.tvExpenseDays.text = "共${days}天有支出"
+                    viewModel.expenseDays.collect { count ->
+                        val unit = when (viewModel.timeRangeType.value) {
+                            StatisticsViewModel.TIME_RANGE_MONTH -> "天"
+                            StatisticsViewModel.TIME_RANGE_YEAR -> "月"
+                            else -> "年"
+                        }
+                        binding.tvExpenseDays.text = "共${count}${unit}有支出"
                     }
                 }
 
-                // 观察收入天数
+                // 观察收入天数/月数/年数
                 launch {
-                    viewModel.incomeDays.collect { days ->
-                        binding.tvIncomeDays.text = "共${days}天有收入"
+                    viewModel.incomeDays.collect { count ->
+                        val unit = when (viewModel.timeRangeType.value) {
+                            StatisticsViewModel.TIME_RANGE_MONTH -> "天"
+                            StatisticsViewModel.TIME_RANGE_YEAR -> "月"
+                            else -> "年"
+                        }
+                        binding.tvIncomeDays.text = "共${count}${unit}有收入"
+                    }
+                }
+                
+                // 观察时间范围类型变化
+                launch {
+                    viewModel.timeRangeType.collect { timeRange ->
+                        updateLabels(timeRange)
                     }
                 }
 

@@ -329,8 +329,6 @@ class SettingsFragment : Fragment() {
                 • MVVM 架构
                 • Material Design 3
                 • MPAndroidChart
-                
-                课程大作业 · 2025
             """.trimIndent())
             .setPositiveButton("确定", null)
             .show()

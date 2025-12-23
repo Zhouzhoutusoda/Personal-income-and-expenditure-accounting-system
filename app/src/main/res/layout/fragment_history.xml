@@ -41,10 +41,49 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <!-- 月份选择 -->
-                <LinearLayout
+                <!-- 时间范围选择 -->
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_time_range"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
+                    app:selectionRequired="true"
+                    app:singleSelection="true"
+                    app:chipSpacingHorizontal="8dp">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_month"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="按月"
+                        app:checkedIconVisible="false" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_year"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="按年"
+                        app:checkedIconVisible="false" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_all_time"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="全部"
+                        app:checkedIconVisible="false" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+                <!-- 月份/年份选择 -->
+                <LinearLayout
+                    android:id="@+id/layout_time_navigation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -53,7 +92,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="上个月"
+                        android:contentDescription="上一个"
                         android:src="@drawable/ic_arrow_left"
                         app:tint="@color/text_secondary" />
 
@@ -73,7 +112,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="下个月"
+                        android:contentDescription="下一个"
                         android:src="@drawable/ic_arrow_right"
                         app:tint="@color/text_secondary" />
 

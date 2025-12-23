@@ -108,6 +108,20 @@ class RecordRepository(private val recordDao: RecordDao) {
     }
     
     /**
+     * 获取全部总收入
+     */
+    suspend fun getTotalIncomeAll(): Double {
+        return recordDao.getTotalIncomeAll()
+    }
+    
+    /**
+     * 获取全部总支出
+     */
+    suspend fun getTotalExpenseAll(): Double {
+        return recordDao.getTotalExpenseAll()
+    }
+    
+    /**
      * 获取指定账本在日期范围内的收支统计
      */
     suspend fun getAccountStatistics(
