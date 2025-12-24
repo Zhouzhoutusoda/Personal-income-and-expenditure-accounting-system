@@ -31,6 +31,12 @@ class HistoryViewModel : ViewModel() {
         const val TIME_RANGE_MONTH = 0   // 按月
         const val TIME_RANGE_YEAR = 1    // 按年
         const val TIME_RANGE_ALL = 2     // 全部
+        
+        // 排序类型
+        const val SORT_DATE_DESC = 0     // 时间倒序（新→旧）
+        const val SORT_DATE_ASC = 1      // 时间正序（旧→新）
+        const val SORT_AMOUNT_DESC = 2   // 金额倒序（高→低）
+        const val SORT_AMOUNT_ASC = 3    // 金额正序（低→高）
     }
     
     private val recordRepository = AccountingApplication.recordRepository
@@ -54,6 +60,10 @@ class HistoryViewModel : ViewModel() {
     // 搜索关键词
     private val _searchKeyword = MutableStateFlow("")
     val searchKeyword: StateFlow<String> = _searchKeyword.asStateFlow()
+    
+    // 排序类型
+    private val _sortType = MutableStateFlow(SORT_DATE_DESC)
+    val sortType: StateFlow<Int> = _sortType.asStateFlow()
     
     // 原始记录列表
     private var allRecords: List<RecordWithCategory> = emptyList()
@@ -205,6 +215,14 @@ class HistoryViewModel : ViewModel() {
     }
     
     /**
+     * 设置排序类型
+     */
+    fun setSortType(type: Int) {
+        _sortType.value = type
+        applyFilters()
+    }
+    
+    /**
      * 加载记录
      */
     fun loadRecords() {
@@ -331,8 +349,13 @@ class HistoryViewModel : ViewModel() {
             }
         }
         
-        // 按日期倒序排序
-        filtered = filtered.sortedByDescending { it.record.date }
+        // 应用排序
+        filtered = when (_sortType.value) {
+            SORT_DATE_ASC -> filtered.sortedBy { it.record.date }
+            SORT_AMOUNT_DESC -> filtered.sortedByDescending { it.record.amount }
+            SORT_AMOUNT_ASC -> filtered.sortedBy { it.record.amount }
+            else -> filtered.sortedByDescending { it.record.date } // 默认时间倒序
+        }
         
         _records.value = filtered
         _hasSearchResult.value = keyword.isEmpty() || filtered.isNotEmpty()
@@ -357,6 +380,27 @@ class HistoryViewModel : ViewModel() {
                 throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "删除记录失败: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * 更新记录
+     */
+    fun updateRecord(record: Record) {
+        viewModelScope.launch {
+            try {
+                recordRepository.update(record)
+                
+                Log.d(TAG, "✅ 更新记录成功: ID=${record.id}")
+                
+                // 重新加载数据
+                loadRecords()
+                
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
+            } catch (e: Exception) {
+                Log.e(TAG, "更新记录失败: ${e.message}", e)
             }
         }
     }
