@@ -14,6 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/surface"
+        android:fitsSystemWindows="true"
         app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
@@ -29,7 +30,7 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true"
+        android:overScrollMode="always"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -128,82 +129,21 @@
                         tools:text="请输入有效金额"
                         tools:visibility="visible" />
 
-                    <!-- 快捷金额和快速记账 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                    <!-- 快速记账按钮 -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_quick_record"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
                         android:layout_marginTop="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.chip.ChipGroup
-                            android:id="@+id/chip_group_amount"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            app:singleSelection="true"
-                            app:selectionRequired="false"
-                            app:singleLine="true"
-                            app:chipSpacingHorizontal="4dp">
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip_10"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="wrap_content"
-                                android:layout_height="40dp"
-                                android:text="¥10"
-                                android:textSize="14sp"
-                                app:chipMinHeight="32dp"
-                                app:checkedIconVisible="false" />
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip_50"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="wrap_content"
-                                android:layout_height="40dp"
-                                android:text="¥50"
-                                android:textSize="14sp"
-                                app:chipMinHeight="32dp"
-                                app:checkedIconVisible="false" />
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip_100"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="wrap_content"
-                                android:layout_height="40dp"
-                                android:text="¥100"
-                                android:textSize="14sp"
-                                app:chipMinHeight="32dp"
-                                app:checkedIconVisible="false" />
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip_500"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="wrap_content"
-                                android:layout_height="40dp"
-                                android:text="¥500"
-                                android:textSize="14sp"
-                                app:chipMinHeight="32dp"
-                                app:checkedIconVisible="false" />
-
-                        </com.google.android.material.chip.ChipGroup>
-
-                        <!-- 快速记账按钮 -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_quick_record"
-                            style="@style/Widget.Material3.Button"
-                            android:layout_width="wrap_content"
-                            android:layout_height="40dp"
-                            android:layout_marginStart="6dp"
-                            android:minWidth="0dp"
-                            android:paddingHorizontal="10dp"
-                            android:text="⚡快记"
-                            android:textColor="@android:color/white"
-                            android:textSize="14sp"
-                            app:backgroundTint="#FF9500"
-                            app:cornerRadius="16dp" />
-
-                    </LinearLayout>
+                        android:layout_gravity="end"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="16dp"
+                        android:text="⚡ 快速记账"
+                        android:textColor="@android:color/white"
+                        android:textSize="14sp"
+                        app:backgroundTint="#FF9500"
+                        app:cornerRadius="20dp" />
 
                 </LinearLayout>
 
@@ -238,7 +178,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:nestedScrollingEnabled="false"
+                        android:minHeight="160dp"
+                        android:clipToPadding="false"
+                        android:overScrollMode="never"
                         tools:itemCount="10"
                         tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                         tools:listitem="@layout/item_category"

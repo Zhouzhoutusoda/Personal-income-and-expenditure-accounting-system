@@ -71,7 +71,6 @@ class RecordFragment : Fragment() {
         
         setupTypeToggle()
         setupAmountInput()
-        setupQuickAmountChips()
         setupQuickRecordButton()
         setupCategoryGrid()
         setupDatePicker()
@@ -146,41 +145,6 @@ class RecordFragment : Fragment() {
                 false
             }
         }
-    }
-    
-    /**
-     * 设置快捷金额按钮
-     */
-    private fun setupQuickAmountChips() {
-        // 使用 ChipGroup 的单选监听器
-        binding.chipGroupAmount.setOnCheckedStateChangeListener { group, checkedIds ->
-            if (checkedIds.isNotEmpty()) {
-                val amount = when (checkedIds[0]) {
-                    R.id.chip_10 -> 10.0
-                    R.id.chip_50 -> 50.0
-                    R.id.chip_100 -> 100.0
-                    R.id.chip_500 -> 500.0
-                    else -> return@setOnCheckedStateChangeListener
-                }
-                setQuickAmount(amount)
-            }
-        }
-        
-        // 当用户手动输入金额时，清除快捷金额的选中状态
-        binding.etAmount.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.chipGroupAmount.clearCheck()
-            }
-        }
-    }
-    
-    /**
-     * 设置快捷金额
-     */
-    private fun setQuickAmount(amount: Double) {
-        binding.etAmount.setText(String.format("%.2f", amount))
-        binding.etAmount.setSelection(binding.etAmount.text?.length ?: 0)
-        hideAmountError()
     }
     
     /**
@@ -329,9 +293,6 @@ class RecordFragment : Fragment() {
             }
         }
         
-        // 6. 清除快捷金额选中状态
-        binding.chipGroupAmount.clearCheck()
-        
         hideAmountError()
         hideCategoryError()
     }
@@ -348,7 +309,12 @@ class RecordFragment : Fragment() {
         binding.rvCategories.apply {
             layoutManager = GridLayoutManager(requireContext(), 5)
             adapter = categoryAdapter
+            // 禁用嵌套滚动，让外层 NestedScrollView 处理滚动
             isNestedScrollingEnabled = false
+            // 设置固定大小以提高性能
+            setHasFixedSize(false)
+            // 确保视图完全渲染
+            itemAnimator = null
         }
     }
 
@@ -647,7 +613,6 @@ class RecordFragment : Fragment() {
     private fun clearInputs() {
         binding.etAmount.text?.clear()
         binding.etNote.text?.clear()
-        binding.chipGroupAmount.clearCheck()  // 清除快捷金额选中状态
         selectedDate.timeInMillis = System.currentTimeMillis()
         updateDateDisplay()
         hideAmountError()
