@@ -73,6 +73,8 @@ class RecordViewModel : ViewModel() {
                 
                 Log.d(TAG, "加载类别完成: 支出${expense.size}个, 收入${income.size}个")
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "加载类别失败: ${e.message}", e)
             }
@@ -88,6 +90,8 @@ class RecordViewModel : ViewModel() {
                 val account = accountRepository.getDefaultAccount()
                 _defaultAccount.value = account
                 Log.d(TAG, "加载默认账本: ${account?.name ?: "无"}")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "加载默认账本失败: ${e.message}", e)
             }
@@ -176,6 +180,8 @@ class RecordViewModel : ViewModel() {
                     amount
                 )
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "保存记录失败: ${e.message}", e)
                 _saveState.value = SaveState.Error("保存失败: ${e.message}")

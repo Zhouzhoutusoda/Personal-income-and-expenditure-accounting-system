@@ -159,6 +159,9 @@ class SettingsFragment : Fragment() {
                 
                 hideLoading()
                 
+                // 检查 binding 是否仍然有效
+                if (_binding == null) return@launch
+                
                 if (result.isSuccess) {
                     Snackbar.make(
                         binding.root,
@@ -170,7 +173,9 @@ class SettingsFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 hideLoading()
-                showError("备份失败: ${e.message}")
+                if (_binding != null) {
+                    showError("备份失败: ${e.message}")
+                }
             }
         }
     }
@@ -232,6 +237,9 @@ class SettingsFragment : Fragment() {
                 
                 hideLoading()
                 
+                // 检查 binding 是否仍然有效
+                if (_binding == null) return@launch
+                
                 if (result.isSuccess) {
                     loadRecordCount()
                     Snackbar.make(
@@ -244,7 +252,9 @@ class SettingsFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 hideLoading()
-                showError("恢复失败: ${e.message}")
+                if (_binding != null) {
+                    showError("恢复失败: ${e.message}")
+                }
             }
         }
     }
@@ -289,6 +299,9 @@ class SettingsFragment : Fragment() {
                 
                 hideLoading()
                 
+                // 检查 binding 是否仍然有效
+                if (_binding == null) return@launch
+                
                 if (result.isSuccess) {
                     loadRecordCount()
                     Snackbar.make(
@@ -301,7 +314,9 @@ class SettingsFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 hideLoading()
-                showError("清空失败: ${e.message}")
+                if (_binding != null) {
+                    showError("清空失败: ${e.message}")
+                }
             }
         }
     }
@@ -359,6 +374,8 @@ class SettingsFragment : Fragment() {
      * 显示错误消息
      */
     private fun showError(message: String) {
+        // 安全检查 binding 是否有效
+        if (_binding == null) return
         Snackbar.make(binding.root, "❌ $message", Snackbar.LENGTH_LONG).show()
     }
 

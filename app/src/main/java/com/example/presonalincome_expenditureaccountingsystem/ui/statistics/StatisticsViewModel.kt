@@ -9,6 +9,8 @@ import com.example.presonalincome_expenditureaccountingsystem.data.entity.Catego
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
 import com.example.presonalincome_expenditureaccountingsystem.util.DateUtils
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -258,6 +260,10 @@ class StatisticsViewModel : ViewModel() {
                 // 获取趋势数据
                 loadTrendData(startDate, endDate, periodDays)
 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // 协程取消是正常行为，不需要记录错误
+                Log.d(TAG, "加载统计数据被取消")
+                throw e  // 重新抛出以确保协程正确取消
             } catch (e: Exception) {
                 Log.e(TAG, "加载统计数据失败: ${e.message}", e)
             }
@@ -366,6 +372,8 @@ class StatisticsViewModel : ViewModel() {
             }
             
             recordFlow.collect { records ->
+                // 检查协程是否仍然活跃
+                currentCoroutineContext().ensureActive()
                 _recordCount.value = records.size
 
                 when (_timeRangeType.value) {
@@ -508,6 +516,9 @@ class StatisticsViewModel : ViewModel() {
                 Log.d(TAG, "趋势数据: ${_trendData.value.size} 个数据点")
                 Log.d(TAG, "========================================")
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // 协程取消是正常行为
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "加载趋势数据失败: ${e.message}", e)
         }

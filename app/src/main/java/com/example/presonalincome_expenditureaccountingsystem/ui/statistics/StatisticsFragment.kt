@@ -93,7 +93,16 @@ class StatisticsFragment : Fragment() {
     private fun loadAccounts() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
+                // 安全检查：确保 Application 已初始化
+                if (!AccountingApplication.isInitialized) {
+                    Log.w(TAG, "Application 尚未初始化完成")
+                    return@launch
+                }
+                
                 AccountingApplication.accountRepository.getAllAccounts().collect { accountList ->
+                    // 检查 binding 是否仍然有效
+                    if (_binding == null) return@collect
+                    
                     accounts = accountList
                     // 更新当前选中账本显示
                     val currentAccount = accounts.find { it.id == viewModel.currentAccountId.value }

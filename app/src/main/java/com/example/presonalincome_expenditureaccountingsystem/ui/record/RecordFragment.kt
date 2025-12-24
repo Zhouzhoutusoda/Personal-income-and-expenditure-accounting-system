@@ -581,6 +581,9 @@ class RecordFragment : Fragment() {
      * 显示保存成功动画
      */
     private fun showSuccessAnimation(type: String, amount: Double) {
+        // 安全检查
+        if (_binding == null) return
+        
         // 设置成功消息
         binding.tvSuccessMessage.text = "$type ¥${String.format("%.2f", amount)}\n保存成功！"
         
@@ -603,8 +606,14 @@ class RecordFragment : Fragment() {
                 .setInterpolator(AccelerateDecelerateInterpolator())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
+                        // 安全检查：确保 view 仍然附着在窗口上
+                        if (!isAttachedToWindow) return
+                        
                         // 延迟后隐藏
                         postDelayed({
+                            // 再次安全检查
+                            if (_binding == null || !isAttachedToWindow) return@postDelayed
+                            
                             animate()
                                 .scaleX(0f)
                                 .scaleY(0f)
@@ -612,6 +621,9 @@ class RecordFragment : Fragment() {
                                 .setDuration(200)
                                 .setListener(object : AnimatorListenerAdapter() {
                                     override fun onAnimationEnd(animation: Animator) {
+                                        // 安全检查
+                                        if (_binding == null) return
+                                        
                                         visibility = View.GONE
                                         
                                         // 重置表单
@@ -644,6 +656,9 @@ class RecordFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // 清除所有动画，防止内存泄漏
+        _binding?.cardSuccess?.animate()?.cancel()
+        _binding?.cardSuccess?.clearAnimation()
         _binding = null
     }
 }

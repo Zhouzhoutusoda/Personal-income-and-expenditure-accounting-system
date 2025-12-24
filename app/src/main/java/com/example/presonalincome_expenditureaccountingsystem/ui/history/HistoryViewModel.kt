@@ -256,6 +256,10 @@ class HistoryViewModel : ViewModel() {
                     _isLoading.value = false
                 }
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // 协程取消是正常行为，不需要记录错误
+                Log.d(TAG, "加载记录被取消")
+                throw e  // 重新抛出以确保协程正确取消
             } catch (e: Exception) {
                 Log.e(TAG, "加载记录失败: ${e.message}", e)
                 _isLoading.value = false
@@ -349,6 +353,8 @@ class HistoryViewModel : ViewModel() {
                 // 重新加载数据
                 loadRecords()
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "删除记录失败: ${e.message}", e)
             }

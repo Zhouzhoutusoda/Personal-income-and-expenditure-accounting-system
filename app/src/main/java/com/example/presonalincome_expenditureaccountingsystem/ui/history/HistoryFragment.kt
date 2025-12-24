@@ -113,11 +113,20 @@ class HistoryFragment : Fragment() {
             ): Boolean = false
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                @Suppress("DEPRECATION")
                 val position = viewHolder.adapterPosition
+                // 安全检查：确保位置有效
+                if (position == RecyclerView.NO_POSITION || position >= recordAdapter.currentList.size) {
+                    return
+                }
+                
                 val record = recordAdapter.currentList[position]
                 
                 // 先删除
                 viewModel.deleteRecord(record)
+                
+                // 检查 binding 是否有效
+                if (_binding == null) return
                 
                 // 显示撤销 Snackbar
                 Snackbar.make(

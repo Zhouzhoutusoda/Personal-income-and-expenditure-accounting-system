@@ -6,8 +6,11 @@ import com.example.presonalincome_expenditureaccountingsystem.data.database.AppD
 import com.example.presonalincome_expenditureaccountingsystem.data.repository.AccountRepository
 import com.example.presonalincome_expenditureaccountingsystem.data.repository.CategoryRepository
 import com.example.presonalincome_expenditureaccountingsystem.data.repository.RecordRepository
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -33,7 +36,21 @@ class AccountingApplication : Application() {
         
         lateinit var accountRepository: AccountRepository
             private set
+        
+        // 检查是否已初始化
+        val isInitialized: Boolean
+            get() = ::database.isInitialized && 
+                    ::recordRepository.isInitialized && 
+                    ::categoryRepository.isInitialized && 
+                    ::accountRepository.isInitialized
     }
+    
+    // 应用级别的协程作用域，使用 SupervisorJob 防止子协程失败影响其他协程
+    private val applicationScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
+            Log.e(TAG, "协程异常: ${throwable.message}", throwable)
+        }
+    )
     
     override fun onCreate() {
         super.onCreate()
@@ -50,11 +67,11 @@ class AccountingApplication : Application() {
         categoryRepository = CategoryRepository(database.categoryDao())
         accountRepository = AccountRepository(database.accountDao())
         
-        // 验证数据库初始化
-        CoroutineScope(Dispatchers.IO).launch {
+        // 验证数据库初始化（使用协程延迟代替线程阻塞）
+        applicationScope.launch {
             try {
-                // 等待一下确保数据库回调完成
-                Thread.sleep(500)
+                // 使用协程延迟代替 Thread.sleep，这样不会阻塞线程
+                delay(500)
                 
                 val categoryCount = categoryRepository.getCategoryCount()
                 val accountCount = accountRepository.getAccountCount()
@@ -74,7 +91,7 @@ class AccountingApplication : Application() {
                 }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "数据库初始化失败: ${e.message}", e)
+                Log.e(TAG, "数据库初始化验证失败: ${e.message}", e)
             }
         }
     }

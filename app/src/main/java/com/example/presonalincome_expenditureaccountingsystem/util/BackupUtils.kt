@@ -50,6 +50,11 @@ object BackupUtils {
                 Log.d(TAG, "========================================")
                 Log.d(TAG, "开始导出数据...")
                 
+                // 安全检查
+                if (!AccountingApplication.isInitialized) {
+                    return@withContext Result.failure(Exception("应用未完全初始化"))
+                }
+                
                 // 获取所有数据
                 val accounts = AccountingApplication.accountRepository.getAllAccounts().first()
                 val categories = AccountingApplication.categoryRepository.getAllCategories().first()
@@ -75,13 +80,15 @@ object BackupUtils {
                     OutputStreamWriter(outputStream).use { writer ->
                         writer.write(json)
                     }
-                }
+                } ?: return@withContext Result.failure(Exception("无法打开输出流"))
                 
                 Log.d(TAG, "✅ 数据导出成功！")
                 Log.d(TAG, "========================================")
                 
                 Result.success("成功导出 ${records.size} 条记录")
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 数据导出失败: ${e.message}", e)
                 Result.failure(e)
@@ -98,16 +105,21 @@ object BackupUtils {
                 Log.d(TAG, "========================================")
                 Log.d(TAG, "开始导入数据...")
                 
+                // 安全检查
+                if (!AccountingApplication.isInitialized) {
+                    return@withContext Result.failure(Exception("应用未完全初始化"))
+                }
+                
                 // 读取文件内容
                 val json = context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     BufferedReader(InputStreamReader(inputStream)).use { reader ->
                         reader.readText()
                     }
-                } ?: throw Exception("无法读取文件")
+                } ?: return@withContext Result.failure(Exception("无法读取文件"))
                 
                 // 解析 JSON
                 val backupData = gson.fromJson(json, BackupData::class.java)
-                    ?: throw Exception("无法解析备份文件")
+                    ?: return@withContext Result.failure(Exception("无法解析备份文件"))
                 
                 Log.d(TAG, "备份文件版本: ${backupData.version}")
                 Log.d(TAG, "备份时间: ${DateUtils.formatDateTime(backupData.timestamp)}")
@@ -156,6 +168,8 @@ object BackupUtils {
                 
                 Result.success("成功导入 $importedCount 条记录")
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 数据导入失败: ${e.message}", e)
                 Result.failure(e)
@@ -172,6 +186,11 @@ object BackupUtils {
                 Log.d(TAG, "========================================")
                 Log.d(TAG, "清空所有数据...")
                 
+                // 安全检查
+                if (!AccountingApplication.isInitialized) {
+                    return@withContext Result.failure(Exception("应用未完全初始化"))
+                }
+                
                 AccountingApplication.database.clearAllTables()
                 
                 // 重新初始化默认数据
@@ -182,6 +201,8 @@ object BackupUtils {
                 
                 Result.success("数据已清空")
                 
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 数据清空失败: ${e.message}", e)
                 Result.failure(e)

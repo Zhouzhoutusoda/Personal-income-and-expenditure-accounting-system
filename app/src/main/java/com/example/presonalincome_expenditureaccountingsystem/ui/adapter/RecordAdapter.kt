@@ -44,6 +44,7 @@ class RecordAdapter(
 
         init {
             binding.root.setOnClickListener {
+                @Suppress("DEPRECATION")
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onItemClick?.invoke(getItem(position))
@@ -51,6 +52,7 @@ class RecordAdapter(
             }
             
             binding.root.setOnLongClickListener {
+                @Suppress("DEPRECATION")
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onItemLongClick?.invoke(getItem(position)) ?: false
@@ -115,7 +117,7 @@ class RecordAdapter(
                 "居住" -> "🏠"
                 "通讯" -> "📱"
                 "医疗" -> "💊"
-                "教育" -> "📚"
+                "教育" -> "📕"
                 "人情" -> "🎁"
                 "工资" -> "💵"
                 "奖金" -> "🎉"

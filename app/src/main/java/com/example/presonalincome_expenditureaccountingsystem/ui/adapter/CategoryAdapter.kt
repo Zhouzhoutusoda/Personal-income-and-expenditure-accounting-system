@@ -91,6 +91,7 @@ class CategoryAdapter(
                     
                     // 更新旧选中项
                     val oldPosition = currentList.indexOfFirst { it.id == oldSelectedId }
+                    @Suppress("DEPRECATION")
                     val currentPosition = adapterPosition
                     if (oldPosition >= 0 && oldPosition != currentPosition) {
                         notifyItemChanged(oldPosition, PAYLOAD_SELECTION_CHANGED)
