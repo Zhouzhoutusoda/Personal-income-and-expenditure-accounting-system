@@ -66,6 +66,7 @@ class HistoryFragment : Fragment() {
         setupMonthNavigation()
         setupSearch()
         setupFilter()
+        setupSort()
         observeViewModel()
     }
     
@@ -264,6 +265,56 @@ class HistoryFragment : Fragment() {
             }
             viewModel.setFilterType(filterType)
         }
+    }
+    
+    /**
+     * 设置排序功能
+     */
+    private fun setupSort() {
+        binding.btnSort.setOnClickListener {
+            showSortDialog()
+        }
+        
+        // 更新排序按钮文字
+        updateSortButtonText()
+    }
+    
+    /**
+     * 显示排序对话框
+     */
+    private fun showSortDialog() {
+        val sortOptions = arrayOf(
+            "按日期（最新在前）",
+            "按日期（最早在前）",
+            "按金额（从高到低）",
+            "按金额（从低到高）"
+        )
+        
+        val currentSort = viewModel.sortType.value
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("选择排序方式")
+            .setSingleChoiceItems(sortOptions, currentSort) { dialog, which ->
+                viewModel.setSortType(which)
+                updateSortButtonText()
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    /**
+     * 更新排序按钮文字
+     */
+    private fun updateSortButtonText() {
+        val sortText = when (viewModel.sortType.value) {
+            HistoryViewModel.SORT_DATE_DESC -> "日期↓"
+            HistoryViewModel.SORT_DATE_ASC -> "日期↑"
+            HistoryViewModel.SORT_AMOUNT_DESC -> "金额↓"
+            HistoryViewModel.SORT_AMOUNT_ASC -> "金额↑"
+            else -> "排序"
+        }
+        binding.btnSort.text = sortText
     }
     
     /**

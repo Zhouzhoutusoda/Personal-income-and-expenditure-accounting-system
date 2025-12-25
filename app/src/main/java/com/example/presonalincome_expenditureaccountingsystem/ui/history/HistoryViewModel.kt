@@ -32,6 +32,12 @@ class HistoryViewModel : ViewModel() {
         const val TIME_RANGE_MONTH = 0   // 按月
         const val TIME_RANGE_YEAR = 1    // 按年
         const val TIME_RANGE_ALL = 2     // 全部
+        
+        // 排序类型
+        const val SORT_DATE_DESC = 0     // 按日期倒序（最新在前）
+        const val SORT_DATE_ASC = 1      // 按日期正序（最早在前）
+        const val SORT_AMOUNT_DESC = 2   // 按金额倒序（最大在前）
+        const val SORT_AMOUNT_ASC = 3    // 按金额正序（最小在前）
     }
     
     private val recordRepository = AccountingApplication.recordRepository
@@ -55,6 +61,10 @@ class HistoryViewModel : ViewModel() {
     // 搜索关键词
     private val _searchKeyword = MutableStateFlow("")
     val searchKeyword: StateFlow<String> = _searchKeyword.asStateFlow()
+    
+    // 当前排序类型
+    private val _sortType = MutableStateFlow(SORT_DATE_DESC)
+    val sortType: StateFlow<Int> = _sortType.asStateFlow()
     
     // 原始记录列表
     private var allRecords: List<RecordWithCategory> = emptyList()
@@ -219,6 +229,28 @@ class HistoryViewModel : ViewModel() {
     }
     
     /**
+     * 设置排序类型
+     */
+    fun setSortType(type: Int) {
+        _sortType.value = type
+        applyFilters()
+        Log.d(TAG, "排序方式更改为: ${getSortTypeName(type)}")
+    }
+    
+    /**
+     * 获取排序类型名称
+     */
+    fun getSortTypeName(type: Int): String {
+        return when (type) {
+            SORT_DATE_DESC -> "按日期（最新在前）"
+            SORT_DATE_ASC -> "按日期（最早在前）"
+            SORT_AMOUNT_DESC -> "按金额（从高到低）"
+            SORT_AMOUNT_ASC -> "按金额（从低到高）"
+            else -> "默认排序"
+        }
+    }
+    
+    /**
      * 加载记录
      */
     fun loadRecords() {
@@ -348,13 +380,19 @@ class HistoryViewModel : ViewModel() {
             }
         }
         
-        // 按日期倒序排序
-        filtered = filtered.sortedByDescending { it.record.date }
+        // 根据排序类型排序
+        filtered = when (_sortType.value) {
+            SORT_DATE_DESC -> filtered.sortedByDescending { it.record.date }
+            SORT_DATE_ASC -> filtered.sortedBy { it.record.date }
+            SORT_AMOUNT_DESC -> filtered.sortedByDescending { it.record.amount }
+            SORT_AMOUNT_ASC -> filtered.sortedBy { it.record.amount }
+            else -> filtered.sortedByDescending { it.record.date }
+        }
         
         _records.value = filtered
         _hasSearchResult.value = keyword.isEmpty() || filtered.isNotEmpty()
         
-        Log.d(TAG, "筛选结果: ${filtered.size} 条记录 (关键词: '$keyword', 类型: ${_filterType.value})")
+        Log.d(TAG, "筛选结果: ${filtered.size} 条记录 (关键词: '$keyword', 类型: ${_filterType.value}, 排序: ${getSortTypeName(_sortType.value)})")
     }
     
     /**
