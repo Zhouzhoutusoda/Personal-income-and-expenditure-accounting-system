@@ -2,6 +2,7 @@
 <resources>
     <!-- 主题色 - 苹果风格蓝色 -->
     <color name="primary">#007AFF</color>
+    <color name="primary_light">#E5F2FF</color>
     <color name="primary_variant">#0056B3</color>
     <color name="primary_dark">#004499</color>
     <color name="on_primary">#FFFFFF</color>

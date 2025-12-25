@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.presonalincome_expenditureaccountingsystem.AccountingApplication
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.CategoryStatistics
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
+import com.example.presonalincome_expenditureaccountingsystem.util.AccountManager
 import com.example.presonalincome_expenditureaccountingsystem.util.DateUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -120,6 +121,19 @@ class StatisticsViewModel : ViewModel() {
     init {
         updateTimeDisplay()
         loadData()
+        observeAccountChange()
+    }
+    
+    /**
+     * 观察账本变化，自动刷新数据
+     */
+    private fun observeAccountChange() {
+        viewModelScope.launch {
+            AccountManager.currentAccountId.collect { accountId ->
+                Log.d(TAG, "账本切换到: $accountId，重新加载统计数据")
+                loadData()
+            }
+        }
     }
     
     /**
@@ -228,22 +242,25 @@ class StatisticsViewModel : ViewModel() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             try {
+                // 获取当前账本ID
+                val accountId = AccountManager.getCurrentAccountIdSync()
+                
                 Log.d(TAG, "========================================")
-                Log.d(TAG, "加载统计数据: ${_monthDisplay.value}")
+                Log.d(TAG, "加载统计数据: ${_monthDisplay.value} (账本ID: $accountId)")
 
                 // 计算日期范围
                 val (startDate, endDate, periodDays) = calculateDateRange()
 
-                // 获取总收入和总支出
+                // 获取总收入和总支出（按账本筛选）
                 val income: Double
                 val expense: Double
                 
                 if (_timeRangeType.value == TIME_RANGE_ALL) {
-                    income = recordRepository.getTotalIncomeAll()
-                    expense = recordRepository.getTotalExpenseAll()
+                    income = recordRepository.getTotalIncomeByAccountAll(accountId)
+                    expense = recordRepository.getTotalExpenseByAccountAll(accountId)
                 } else {
-                    income = recordRepository.getTotalIncome(startDate, endDate)
-                    expense = recordRepository.getTotalExpense(startDate, endDate)
+                    income = recordRepository.getTotalIncomeByAccount(accountId, startDate, endDate)
+                    expense = recordRepository.getTotalExpenseByAccount(accountId, startDate, endDate)
                 }
 
                 _monthlyIncome.value = income
@@ -255,10 +272,10 @@ class StatisticsViewModel : ViewModel() {
                 Log.d(TAG, "  - 结余: ¥${income - expense}")
 
                 // 获取分类统计
-                loadCategoryStatistics(startDate, endDate)
+                loadCategoryStatistics(startDate, endDate, accountId)
 
                 // 获取趋势数据
-                loadTrendData(startDate, endDate, periodDays)
+                loadTrendData(startDate, endDate, periodDays, accountId)
 
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // 协程取消是正常行为，不需要记录错误
@@ -314,13 +331,13 @@ class StatisticsViewModel : ViewModel() {
     /**
      * 加载分类统计
      */
-    private suspend fun loadCategoryStatistics(startDate: Long, endDate: Long) {
+    private suspend fun loadCategoryStatistics(startDate: Long, endDate: Long, accountId: Long) {
         try {
-            // 获取支出分类统计
+            // 获取支出分类统计（按账本筛选）
             val expenseStats = if (_timeRangeType.value == TIME_RANGE_ALL) {
-                recordRepository.getExpenseCategoryStatistics(0L, Long.MAX_VALUE)
+                recordRepository.getExpenseCategoryStatisticsByAccount(accountId, 0L, Long.MAX_VALUE)
             } else {
-                recordRepository.getExpenseCategoryStatistics(startDate, endDate)
+                recordRepository.getExpenseCategoryStatisticsByAccount(accountId, startDate, endDate)
             }
             val expenseTotal = expenseStats.sumOf { it.totalAmount }
             
@@ -335,11 +352,11 @@ class StatisticsViewModel : ViewModel() {
             
             Log.d(TAG, "支出分类统计: ${expenseStats.size} 个类别")
 
-            // 获取收入分类统计
+            // 获取收入分类统计（按账本筛选）
             val incomeStats = if (_timeRangeType.value == TIME_RANGE_ALL) {
-                recordRepository.getIncomeCategoryStatistics(0L, Long.MAX_VALUE)
+                recordRepository.getIncomeCategoryStatisticsByAccount(accountId, 0L, Long.MAX_VALUE)
             } else {
-                recordRepository.getIncomeCategoryStatistics(startDate, endDate)
+                recordRepository.getIncomeCategoryStatisticsByAccount(accountId, startDate, endDate)
             }
             val incomeTotal = incomeStats.sumOf { it.totalAmount }
             
@@ -362,13 +379,13 @@ class StatisticsViewModel : ViewModel() {
     /**
      * 加载趋势数据
      */
-    private suspend fun loadTrendData(startDate: Long, endDate: Long, periodDays: Int) {
+    private suspend fun loadTrendData(startDate: Long, endDate: Long, periodDays: Int, accountId: Long) {
         try {
-            // 收集记录
+            // 收集记录（按账本筛选）
             val recordFlow = if (_timeRangeType.value == TIME_RANGE_ALL) {
-                recordRepository.getAllRecordsWithCategory()
+                recordRepository.getRecordsByAccount(accountId)
             } else {
-                recordRepository.getRecordsByDateRange(startDate, endDate)
+                recordRepository.getRecordsByAccountAndDateRange(accountId, startDate, endDate)
             }
             
             recordFlow.collect { records ->

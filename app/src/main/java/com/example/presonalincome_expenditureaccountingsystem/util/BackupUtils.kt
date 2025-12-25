@@ -7,6 +7,7 @@ import com.example.presonalincome_expenditureaccountingsystem.AccountingApplicat
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Account
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Category
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
+import com.example.presonalincome_expenditureaccountingsystem.util.AccountManager
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.Dispatchers
@@ -42,13 +43,76 @@ object BackupUtils {
     )
     
     /**
-     * 导出数据到 JSON 文件
+     * 导出数据到 JSON 文件（导出当前账本）
      */
     suspend fun exportData(context: Context, uri: Uri): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
+                // 获取当前账本ID
+                val currentAccountId = AccountManager.getCurrentAccountIdSync()
+                
                 Log.d(TAG, "========================================")
-                Log.d(TAG, "开始导出数据...")
+                Log.d(TAG, "开始导出当前账本数据 (账本ID: $currentAccountId)...")
+                
+                // 安全检查
+                if (!AccountingApplication.isInitialized) {
+                    return@withContext Result.failure(Exception("应用未完全初始化"))
+                }
+                
+                // 获取当前账本
+                val currentAccount = AccountingApplication.accountRepository.getById(currentAccountId)
+                    ?: return@withContext Result.failure(Exception("当前账本不存在"))
+                
+                // 获取所有类别（类别是共享的）
+                val categories = AccountingApplication.categoryRepository.getAllCategories().first()
+                
+                // 只获取当前账本的记录
+                val records = AccountingApplication.recordRepository.getRecordsByAccount(currentAccountId).first()
+                    .map { it.record }
+                
+                Log.d(TAG, "  - 账本: ${currentAccount.name}")
+                Log.d(TAG, "  - 类别: ${categories.size} 个")
+                Log.d(TAG, "  - 记录: ${records.size} 条")
+                
+                // 创建备份数据
+                val backupData = BackupData(
+                    accounts = listOf(currentAccount),
+                    categories = categories,
+                    records = records
+                )
+                
+                // 转换为 JSON
+                val json = gson.toJson(backupData)
+                
+                // 写入文件
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    OutputStreamWriter(outputStream).use { writer ->
+                        writer.write(json)
+                    }
+                } ?: return@withContext Result.failure(Exception("无法打开输出流"))
+                
+                Log.d(TAG, "✅ 数据导出成功！")
+                Log.d(TAG, "========================================")
+                
+                Result.success("成功导出「${currentAccount.name}」的 ${records.size} 条记录")
+                
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e  // 重新抛出协程取消异常
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 数据导出失败: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+    }
+    
+    /**
+     * 导出所有账本数据到 JSON 文件
+     */
+    suspend fun exportAllData(context: Context, uri: Uri): Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "========================================")
+                Log.d(TAG, "开始导出所有数据...")
                 
                 // 安全检查
                 if (!AccountingApplication.isInitialized) {
@@ -85,7 +149,7 @@ object BackupUtils {
                 Log.d(TAG, "✅ 数据导出成功！")
                 Log.d(TAG, "========================================")
                 
-                Result.success("成功导出 ${records.size} 条记录")
+                Result.success("成功导出全部 ${records.size} 条记录")
                 
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e  // 重新抛出协程取消异常

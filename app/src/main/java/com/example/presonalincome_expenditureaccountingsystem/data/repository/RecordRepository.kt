@@ -135,6 +135,34 @@ class RecordRepository(private val recordDao: RecordDao) {
     }
     
     /**
+     * 获取指定账本在日期范围内的总收入
+     */
+    suspend fun getTotalIncomeByAccount(accountId: Long, startDate: Long, endDate: Long): Double {
+        return recordDao.getTotalIncomeByAccount(accountId, startDate, endDate)
+    }
+    
+    /**
+     * 获取指定账本在日期范围内的总支出
+     */
+    suspend fun getTotalExpenseByAccount(accountId: Long, startDate: Long, endDate: Long): Double {
+        return recordDao.getTotalExpenseByAccount(accountId, startDate, endDate)
+    }
+    
+    /**
+     * 获取指定账本的全部总收入
+     */
+    suspend fun getTotalIncomeByAccountAll(accountId: Long): Double {
+        return recordDao.getTotalIncomeByAccountAll(accountId)
+    }
+    
+    /**
+     * 获取指定账本的全部总支出
+     */
+    suspend fun getTotalExpenseByAccountAll(accountId: Long): Double {
+        return recordDao.getTotalExpenseByAccountAll(accountId)
+    }
+    
+    /**
      * 获取支出类别统计
      */
     suspend fun getExpenseCategoryStatistics(
@@ -173,10 +201,57 @@ class RecordRepository(private val recordDao: RecordDao) {
     }
     
     /**
+     * 获取指定账本的支出类别统计
+     */
+    suspend fun getExpenseCategoryStatisticsByAccount(
+        accountId: Long,
+        startDate: Long,
+        endDate: Long
+    ): List<CategoryStatistics> {
+        val stats = recordDao.getExpenseCategoryStatisticsByAccount(accountId, startDate, endDate)
+        val total = stats.sumOf { it.totalAmount }
+        
+        return if (total > 0) {
+            stats.map { 
+                it.copy(percentage = (it.totalAmount / total * 100).toFloat())
+            }
+        } else {
+            stats
+        }
+    }
+    
+    /**
+     * 获取指定账本的收入类别统计
+     */
+    suspend fun getIncomeCategoryStatisticsByAccount(
+        accountId: Long,
+        startDate: Long,
+        endDate: Long
+    ): List<CategoryStatistics> {
+        val stats = recordDao.getIncomeCategoryStatisticsByAccount(accountId, startDate, endDate)
+        val total = stats.sumOf { it.totalAmount }
+        
+        return if (total > 0) {
+            stats.map { 
+                it.copy(percentage = (it.totalAmount / total * 100).toFloat())
+            }
+        } else {
+            stats
+        }
+    }
+    
+    /**
      * 获取记录总数
      */
     suspend fun getRecordCount(): Int {
         return recordDao.getRecordCount()
+    }
+    
+    /**
+     * 获取指定账本的记录数量
+     */
+    suspend fun getRecordCountByAccount(accountId: Long): Int {
+        return recordDao.getRecordCountByAccount(accountId)
     }
 }
 

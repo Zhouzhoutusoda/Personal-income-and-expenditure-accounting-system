@@ -3,6 +3,7 @@ package com.example.presonalincome_expenditureaccountingsystem.ui.settings
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,10 +12,18 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.presonalincome_expenditureaccountingsystem.AccountingApplication
 import com.example.presonalincome_expenditureaccountingsystem.R
+import com.example.presonalincome_expenditureaccountingsystem.data.entity.Account
+import com.example.presonalincome_expenditureaccountingsystem.databinding.DialogAccountManagerBinding
+import com.example.presonalincome_expenditureaccountingsystem.databinding.DialogAddAccountBinding
 import com.example.presonalincome_expenditureaccountingsystem.databinding.FragmentSettingsBinding
+import com.example.presonalincome_expenditureaccountingsystem.ui.adapter.AccountAdapter
+import com.example.presonalincome_expenditureaccountingsystem.util.AccountManager
 import com.example.presonalincome_expenditureaccountingsystem.util.BackupUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -27,12 +36,19 @@ import kotlinx.coroutines.launch
  */
 class SettingsFragment : Fragment() {
 
+    companion object {
+        private const val TAG = "SettingsFragment"
+    }
+
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
     // 文件选择器
     private lateinit var createFileLauncher: ActivityResultLauncher<Intent>
     private lateinit var openFileLauncher: ActivityResultLauncher<Intent>
+    
+    // 账本管理对话框
+    private var accountManagerDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,20 +90,69 @@ class SettingsFragment : Fragment() {
         
         setupClickListeners()
         loadRecordCount()
+        observeCurrentAccount()
     }
     
     override fun onResume() {
         super.onResume()
         loadRecordCount()
+        
+        // 刷新当前账本信息
+        viewLifecycleOwner.lifecycleScope.launch {
+            AccountManager.refreshCurrentAccount()
+        }
+    }
+    
+    /**
+     * 观察当前账本变化
+     */
+    private fun observeCurrentAccount() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                AccountManager.currentAccount.collect { account ->
+                    if (_binding != null && account != null) {
+                        updateCurrentAccountUI(account)
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * 更新当前账本 UI
+     */
+    private fun updateCurrentAccountUI(account: Account) {
+        binding.tvAccountName.text = account.name
+        binding.tvAccountIcon.text = getAccountIcon(account.icon)
+    }
+    
+    /**
+     * 获取账本图标
+     */
+    private fun getAccountIcon(iconName: String): String {
+        return when (iconName) {
+            "ic_wallet" -> "💰"
+            "ic_travel" -> "✈️"
+            "ic_home" -> "🏠"
+            "ic_car" -> "🚗"
+            "ic_gift" -> "🎁"
+            "ic_shopping" -> "🛒"
+            "ic_food" -> "🍔"
+            "ic_health" -> "💊"
+            "ic_education" -> "📚"
+            "ic_entertainment" -> "🎮"
+            else -> "📒"
+        }
     }
 
     /**
-     * 加载记录数量
+     * 加载当前账本的记录数量
      */
     private fun loadRecordCount() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val count = AccountingApplication.recordRepository.getRecordCount()
+                val accountId = AccountManager.getCurrentAccountIdSync()
+                val count = AccountingApplication.recordRepository.getRecordCountByAccount(accountId)
                 binding.tvRecordSummary.text = "已记录 $count 笔"
             } catch (e: Exception) {
                 binding.tvRecordSummary.text = "已记录 0 笔"
@@ -99,6 +164,11 @@ class SettingsFragment : Fragment() {
      * 设置点击事件
      */
     private fun setupClickListeners() {
+        // 账本切换
+        binding.cardCurrentAccount.setOnClickListener {
+            showAccountManagerDialog()
+        }
+        
         // 备份数据
         binding.layoutBackup.setOnClickListener {
             showBackupDialog()
@@ -117,6 +187,220 @@ class SettingsFragment : Fragment() {
         // 关于
         binding.layoutAbout.setOnClickListener {
             showAboutDialog()
+        }
+    }
+    
+    /**
+     * 显示账本管理对话框
+     */
+    private fun showAccountManagerDialog() {
+        val dialogBinding = DialogAccountManagerBinding.inflate(layoutInflater)
+        
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(dialogBinding.root)
+            .create()
+        
+        accountManagerDialog = dialog
+        
+        // 设置 RecyclerView
+        dialogBinding.rvAccounts.layoutManager = LinearLayoutManager(requireContext())
+        
+        // 加载账本列表
+        loadAccountList(dialogBinding, dialog)
+        
+        // 添加账本按钮
+        dialogBinding.btnAddAccount.setOnClickListener {
+            dialog.dismiss()
+            showAddAccountDialog()
+        }
+        
+        dialog.show()
+    }
+    
+    /**
+     * 加载账本列表
+     */
+    private fun loadAccountList(dialogBinding: DialogAccountManagerBinding, dialog: AlertDialog) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val accounts = AccountingApplication.accountRepository.getAllAccountsList()
+                val currentAccountId = AccountManager.getCurrentAccountIdSync()
+                
+                if (accounts.isEmpty()) {
+                    dialogBinding.rvAccounts.visibility = View.GONE
+                    dialogBinding.tvEmpty.visibility = View.VISIBLE
+                } else {
+                    dialogBinding.rvAccounts.visibility = View.VISIBLE
+                    dialogBinding.tvEmpty.visibility = View.GONE
+                    
+                    val adapter = AccountAdapter(
+                        currentAccountId = currentAccountId,
+                        onItemClick = { account ->
+                            // 切换账本
+                            switchAccount(account, dialog)
+                        },
+                        onDeleteClick = { account ->
+                            // 删除账本
+                            showDeleteAccountDialog(account, dialogBinding, dialog)
+                        }
+                    )
+                    
+                    dialogBinding.rvAccounts.adapter = adapter
+                    adapter.submitList(accounts)
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "加载账本列表失败: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * 切换账本
+     */
+    private fun switchAccount(account: Account, dialog: AlertDialog) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                AccountManager.switchAccount(account.id)
+                dialog.dismiss()
+                
+                // 刷新记录数量
+                loadRecordCount()
+                
+                Snackbar.make(
+                    binding.root,
+                    "已切换到「${account.name}」",
+                    Snackbar.LENGTH_SHORT
+                ).show()
+                
+                Log.d(TAG, "✅ 切换账本成功: ${account.name}")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "切换账本失败: ${e.message}", e)
+                showError("切换账本失败")
+            }
+        }
+    }
+    
+    /**
+     * 显示添加账本对话框
+     */
+    private fun showAddAccountDialog() {
+        val dialogBinding = DialogAddAccountBinding.inflate(layoutInflater)
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("新建账本")
+            .setView(dialogBinding.root)
+            .setPositiveButton("创建") { _, _ ->
+                val name = dialogBinding.etName.text.toString().trim()
+                val description = dialogBinding.etDescription.text.toString().trim()
+                val icon = getSelectedIcon(dialogBinding)
+                
+                if (name.isEmpty()) {
+                    Toast.makeText(requireContext(), "请输入账本名称", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                
+                createAccount(name, description, icon)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    /**
+     * 获取选中的图标
+     */
+    private fun getSelectedIcon(dialogBinding: DialogAddAccountBinding): String {
+        return when (dialogBinding.chipGroupIcons.checkedChipId) {
+            R.id.chip_wallet -> "ic_wallet"
+            R.id.chip_travel -> "ic_travel"
+            R.id.chip_home -> "ic_home"
+            R.id.chip_car -> "ic_car"
+            R.id.chip_shopping -> "ic_shopping"
+            R.id.chip_education -> "ic_education"
+            else -> "ic_wallet"
+        }
+    }
+    
+    /**
+     * 创建账本
+     */
+    private fun createAccount(name: String, description: String, icon: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val result = AccountingApplication.accountRepository.createAccount(name, description, icon)
+                
+                if (result > 0) {
+                    Snackbar.make(
+                        binding.root,
+                        "账本「$name」创建成功",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                    
+                    Log.d(TAG, "✅ 创建账本成功: $name (ID: $result)")
+                    
+                    // 重新打开账本管理对话框
+                    showAccountManagerDialog()
+                } else {
+                    Toast.makeText(requireContext(), "账本名称已存在", Toast.LENGTH_SHORT).show()
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "创建账本失败: ${e.message}", e)
+                showError("创建账本失败")
+            }
+        }
+    }
+    
+    /**
+     * 显示删除账本确认对话框
+     */
+    private fun showDeleteAccountDialog(
+        account: Account,
+        dialogBinding: DialogAccountManagerBinding,
+        parentDialog: AlertDialog
+    ) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("删除账本")
+            .setMessage("确定要删除「${account.name}」吗？\n\n⚠️ 该账本下的所有记录也将被删除！")
+            .setPositiveButton("删除") { _, _ ->
+                deleteAccount(account, dialogBinding, parentDialog)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    /**
+     * 删除账本
+     */
+    private fun deleteAccount(
+        account: Account,
+        dialogBinding: DialogAccountManagerBinding,
+        parentDialog: AlertDialog
+    ) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val result = AccountingApplication.accountRepository.deleteById(account.id)
+                
+                if (result > 0) {
+                    Snackbar.make(
+                        binding.root,
+                        "账本「${account.name}」已删除",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                    
+                    Log.d(TAG, "✅ 删除账本成功: ${account.name}")
+                    
+                    // 刷新列表
+                    loadAccountList(dialogBinding, parentDialog)
+                } else {
+                    Toast.makeText(requireContext(), "无法删除该账本", Toast.LENGTH_SHORT).show()
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "删除账本失败: ${e.message}", e)
+                showError("删除账本失败")
+            }
         }
     }
     
@@ -382,6 +666,7 @@ class SettingsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         loadingDialog?.dismiss()
+        accountManagerDialog?.dismiss()
         _binding = null
     }
 }

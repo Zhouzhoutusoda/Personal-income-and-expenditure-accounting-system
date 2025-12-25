@@ -10,7 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -21,7 +20,6 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.presonalincome_expenditureaccountingsystem.R
-import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.RecordWithCategory
 import com.example.presonalincome_expenditureaccountingsystem.databinding.FragmentHistoryBinding
 import com.example.presonalincome_expenditureaccountingsystem.ui.adapter.RecordAdapter
@@ -68,7 +66,6 @@ class HistoryFragment : Fragment() {
         setupMonthNavigation()
         setupSearch()
         setupFilter()
-        setupSort()
         observeViewModel()
     }
     
@@ -270,57 +267,6 @@ class HistoryFragment : Fragment() {
     }
     
     /**
-     * 设置排序功能
-     */
-    private fun setupSort() {
-        binding.btnSort.setOnClickListener { view ->
-            showSortMenu(view)
-        }
-    }
-    
-    /**
-     * 显示排序菜单
-     */
-    private fun showSortMenu(anchor: View) {
-        val popupMenu = android.widget.PopupMenu(requireContext(), anchor)
-        popupMenu.menu.apply {
-            add(0, 0, 0, "⏰ 时间 新→旧")
-            add(0, 1, 1, "⏰ 时间 旧→新")
-            add(0, 2, 2, "💰 金额 高→低")
-            add(0, 3, 3, "💰 金额 低→高")
-        }
-        
-        popupMenu.setOnMenuItemClickListener { item ->
-            val sortType = when (item.itemId) {
-                0 -> HistoryViewModel.SORT_DATE_DESC
-                1 -> HistoryViewModel.SORT_DATE_ASC
-                2 -> HistoryViewModel.SORT_AMOUNT_DESC
-                3 -> HistoryViewModel.SORT_AMOUNT_ASC
-                else -> HistoryViewModel.SORT_DATE_DESC
-            }
-            viewModel.setSortType(sortType)
-            updateSortButtonText(sortType)
-            true
-        }
-        
-        popupMenu.show()
-    }
-    
-    /**
-     * 更新排序按钮文字
-     */
-    private fun updateSortButtonText(sortType: Int) {
-        val text = when (sortType) {
-            HistoryViewModel.SORT_DATE_DESC -> "时间↓"
-            HistoryViewModel.SORT_DATE_ASC -> "时间↑"
-            HistoryViewModel.SORT_AMOUNT_DESC -> "金额↓"
-            HistoryViewModel.SORT_AMOUNT_ASC -> "金额↑"
-            else -> "排序"
-        }
-        binding.btnSort.text = text
-    }
-    
-    /**
      * 观察 ViewModel 状态变化
      */
     private fun observeViewModel() {
@@ -457,58 +403,9 @@ class HistoryFragment : Fragment() {
             .setTitle("记录详情")
             .setMessage(message)
             .setPositiveButton("确定", null)
-            .setNeutralButton("编辑") { _, _ ->
-                showEditDialog(recordWithCategory)
-            }
             .setNegativeButton("删除") { _, _ ->
                 showDeleteConfirmDialog(recordWithCategory)
             }
-            .show()
-    }
-    
-    /**
-     * 显示编辑记录对话框
-     */
-    private fun showEditDialog(recordWithCategory: RecordWithCategory) {
-        val record = recordWithCategory.record
-        
-        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_record, null)
-        val chipExpense = dialogView.findViewById<com.google.android.material.chip.Chip>(R.id.chip_expense)
-        val chipIncome = dialogView.findViewById<com.google.android.material.chip.Chip>(R.id.chip_income)
-        val etAmount = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_amount)
-        val etNote = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_note)
-        
-        // 填充当前数据
-        if (record.isExpense) {
-            chipExpense.isChecked = true
-        } else {
-            chipIncome.isChecked = true
-        }
-        etAmount.setText(String.format("%.2f", record.amount))
-        etNote.setText(record.note)
-        
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("编辑记录")
-            .setView(dialogView)
-            .setPositiveButton("保存") { _, _ ->
-                // 获取编辑后的数据
-                val newAmount = etAmount.text.toString().toDoubleOrNull() ?: record.amount
-                val newNote = etNote.text.toString()
-                val newType = if (chipExpense.isChecked) Record.TYPE_EXPENSE else Record.TYPE_INCOME
-                
-                // 创建更新后的记录
-                val updatedRecord = record.copy(
-                    amount = newAmount,
-                    note = newNote,
-                    type = newType
-                )
-                
-                // 更新记录
-                viewModel.updateRecord(updatedRecord)
-                
-                Toast.makeText(requireContext(), "记录已更新", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("取消", null)
             .show()
     }
     
@@ -519,15 +416,14 @@ class HistoryFragment : Fragment() {
         val record = recordWithCategory.record
         val typeStr = if (record.isExpense) "支出" else "收入"
         
-        val options = arrayOf("查看详情", "编辑记录", "删除记录")
+        val options = arrayOf("查看详情", "删除记录")
         
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("$typeStr ¥${String.format("%.2f", record.amount)}")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showRecordDetail(recordWithCategory)
-                    1 -> showEditDialog(recordWithCategory)
-                    2 -> showDeleteConfirmDialog(recordWithCategory)
+                    1 -> showDeleteConfirmDialog(recordWithCategory)
                 }
             }
             .show()

@@ -217,6 +217,54 @@ interface RecordDao {
     suspend fun getIncomeCategoryStatistics(startDate: Long, endDate: Long): List<CategoryStatistics>
     
     /**
+     * 获取指定账本的类别统计（支出）
+     */
+    @Query("""
+        SELECT 
+            c.id as categoryId,
+            c.name as categoryName,
+            c.icon as categoryIcon,
+            COALESCE(SUM(r.amount), 0.0) as totalAmount,
+            COUNT(r.id) as recordCount,
+            0.0 as percentage
+        FROM categories c
+        LEFT JOIN records r ON c.id = r.categoryId 
+            AND r.type = 0 
+            AND r.accountId = :accountId
+            AND r.date >= :startDate 
+            AND r.date <= :endDate
+        WHERE c.type = 0
+        GROUP BY c.id
+        HAVING totalAmount > 0
+        ORDER BY totalAmount DESC
+    """)
+    suspend fun getExpenseCategoryStatisticsByAccount(accountId: Long, startDate: Long, endDate: Long): List<CategoryStatistics>
+    
+    /**
+     * 获取指定账本的类别统计（收入）
+     */
+    @Query("""
+        SELECT 
+            c.id as categoryId,
+            c.name as categoryName,
+            c.icon as categoryIcon,
+            COALESCE(SUM(r.amount), 0.0) as totalAmount,
+            COUNT(r.id) as recordCount,
+            0.0 as percentage
+        FROM categories c
+        LEFT JOIN records r ON c.id = r.categoryId 
+            AND r.type = 1 
+            AND r.accountId = :accountId
+            AND r.date >= :startDate 
+            AND r.date <= :endDate
+        WHERE c.type = 1
+        GROUP BY c.id
+        HAVING totalAmount > 0
+        ORDER BY totalAmount DESC
+    """)
+    suspend fun getIncomeCategoryStatisticsByAccount(accountId: Long, startDate: Long, endDate: Long): List<CategoryStatistics>
+    
+    /**
      * 获取记录总数
      */
     @Query("SELECT COUNT(*) FROM records")
@@ -227,5 +275,17 @@ interface RecordDao {
      */
     @Query("SELECT COUNT(*) FROM records WHERE accountId = :accountId")
     suspend fun getRecordCountByAccount(accountId: Long): Int
+    
+    /**
+     * 获取指定账本的全部总收入
+     */
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM records WHERE accountId = :accountId AND type = 1")
+    suspend fun getTotalIncomeByAccountAll(accountId: Long): Double
+    
+    /**
+     * 获取指定账本的全部总支出
+     */
+    @Query("SELECT COALESCE(SUM(amount), 0.0) FROM records WHERE accountId = :accountId AND type = 0")
+    suspend fun getTotalExpenseByAccountAll(accountId: Long): Double
 }
 

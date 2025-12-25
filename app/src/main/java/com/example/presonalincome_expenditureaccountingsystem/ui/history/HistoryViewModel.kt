@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.presonalincome_expenditureaccountingsystem.AccountingApplication
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.RecordWithCategory
+import com.example.presonalincome_expenditureaccountingsystem.util.AccountManager
 import com.example.presonalincome_expenditureaccountingsystem.util.DateUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,12 +32,6 @@ class HistoryViewModel : ViewModel() {
         const val TIME_RANGE_MONTH = 0   // 按月
         const val TIME_RANGE_YEAR = 1    // 按年
         const val TIME_RANGE_ALL = 2     // 全部
-        
-        // 排序类型
-        const val SORT_DATE_DESC = 0     // 时间倒序（新→旧）
-        const val SORT_DATE_ASC = 1      // 时间正序（旧→新）
-        const val SORT_AMOUNT_DESC = 2   // 金额倒序（高→低）
-        const val SORT_AMOUNT_ASC = 3    // 金额正序（低→高）
     }
     
     private val recordRepository = AccountingApplication.recordRepository
@@ -60,10 +55,6 @@ class HistoryViewModel : ViewModel() {
     // 搜索关键词
     private val _searchKeyword = MutableStateFlow("")
     val searchKeyword: StateFlow<String> = _searchKeyword.asStateFlow()
-    
-    // 排序类型
-    private val _sortType = MutableStateFlow(SORT_DATE_DESC)
-    val sortType: StateFlow<Int> = _sortType.asStateFlow()
     
     // 原始记录列表
     private var allRecords: List<RecordWithCategory> = emptyList()
@@ -103,6 +94,19 @@ class HistoryViewModel : ViewModel() {
     init {
         updateTimeDisplay()
         loadRecords()
+        observeAccountChange()
+    }
+    
+    /**
+     * 观察账本变化，自动刷新数据
+     */
+    private fun observeAccountChange() {
+        viewModelScope.launch {
+            AccountManager.currentAccountId.collect { accountId ->
+                Log.d(TAG, "账本切换到: $accountId，重新加载数据")
+                loadRecords()
+            }
+        }
     }
     
     /**
@@ -215,14 +219,6 @@ class HistoryViewModel : ViewModel() {
     }
     
     /**
-     * 设置排序类型
-     */
-    fun setSortType(type: Int) {
-        _sortType.value = type
-        applyFilters()
-    }
-    
-    /**
      * 加载记录
      */
     fun loadRecords() {
@@ -231,24 +227,27 @@ class HistoryViewModel : ViewModel() {
             try {
                 _isLoading.value = true
                 
+                // 获取当前账本ID
+                val accountId = AccountManager.getCurrentAccountIdSync()
+                
                 // 计算日期范围
                 val (startDate, endDate) = calculateDateRange()
                 
                 Log.d(TAG, "----------------------------------------")
-                Log.d(TAG, "加载记录: ${_timeDisplay.value}")
+                Log.d(TAG, "加载记录: ${_timeDisplay.value} (账本ID: $accountId)")
                 Log.d(TAG, "  开始日期: ${if (startDate == 0L) "无限制" else DateUtils.formatDate(startDate)}")
                 Log.d(TAG, "  结束日期: ${if (endDate == Long.MAX_VALUE) "无限制" else DateUtils.formatDate(endDate)}")
                 
-                // 获取统计数据
+                // 获取统计数据（按账本筛选）
                 val income: Double
                 val expense: Double
                 
                 if (_timeRangeType.value == TIME_RANGE_ALL) {
-                    income = recordRepository.getTotalIncomeAll()
-                    expense = recordRepository.getTotalExpenseAll()
+                    income = recordRepository.getTotalIncomeByAccountAll(accountId)
+                    expense = recordRepository.getTotalExpenseByAccountAll(accountId)
                 } else {
-                    income = recordRepository.getTotalIncome(startDate, endDate)
-                    expense = recordRepository.getTotalExpense(startDate, endDate)
+                    income = recordRepository.getTotalIncomeByAccount(accountId, startDate, endDate)
+                    expense = recordRepository.getTotalExpenseByAccount(accountId, startDate, endDate)
                 }
                 
                 _totalIncome.value = income
@@ -259,11 +258,11 @@ class HistoryViewModel : ViewModel() {
                 Log.d(TAG, "  - 支出: ¥$expense")
                 Log.d(TAG, "  - 结余: ¥${income - expense}")
                 
-                // 收集 Flow 数据
+                // 收集 Flow 数据（按账本筛选）
                 val recordFlow = if (_timeRangeType.value == TIME_RANGE_ALL) {
-                    recordRepository.getAllRecordsWithCategory()
+                    recordRepository.getRecordsByAccount(accountId)
                 } else {
-                    recordRepository.getRecordsByDateRange(startDate, endDate)
+                    recordRepository.getRecordsByAccountAndDateRange(accountId, startDate, endDate)
                 }
                 
                 recordFlow.collect { recordList ->
@@ -349,13 +348,8 @@ class HistoryViewModel : ViewModel() {
             }
         }
         
-        // 应用排序
-        filtered = when (_sortType.value) {
-            SORT_DATE_ASC -> filtered.sortedBy { it.record.date }
-            SORT_AMOUNT_DESC -> filtered.sortedByDescending { it.record.amount }
-            SORT_AMOUNT_ASC -> filtered.sortedBy { it.record.amount }
-            else -> filtered.sortedByDescending { it.record.date } // 默认时间倒序
-        }
+        // 按日期倒序排序
+        filtered = filtered.sortedByDescending { it.record.date }
         
         _records.value = filtered
         _hasSearchResult.value = keyword.isEmpty() || filtered.isNotEmpty()
@@ -380,27 +374,6 @@ class HistoryViewModel : ViewModel() {
                 throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
                 Log.e(TAG, "删除记录失败: ${e.message}", e)
-            }
-        }
-    }
-    
-    /**
-     * 更新记录
-     */
-    fun updateRecord(record: Record) {
-        viewModelScope.launch {
-            try {
-                recordRepository.update(record)
-                
-                Log.d(TAG, "✅ 更新记录成功: ID=${record.id}")
-                
-                // 重新加载数据
-                loadRecords()
-                
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e  // 重新抛出协程取消异常
-            } catch (e: Exception) {
-                Log.e(TAG, "更新记录失败: ${e.message}", e)
             }
         }
     }

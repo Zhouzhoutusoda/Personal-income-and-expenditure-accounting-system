@@ -6,6 +6,7 @@ import com.example.presonalincome_expenditureaccountingsystem.data.database.AppD
 import com.example.presonalincome_expenditureaccountingsystem.data.repository.AccountRepository
 import com.example.presonalincome_expenditureaccountingsystem.data.repository.CategoryRepository
 import com.example.presonalincome_expenditureaccountingsystem.data.repository.RecordRepository
+import com.example.presonalincome_expenditureaccountingsystem.util.AccountManager
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,9 @@ class AccountingApplication : Application() {
         categoryRepository = CategoryRepository(database.categoryDao())
         accountRepository = AccountRepository(database.accountDao())
         
+        // 初始化账本管理器
+        AccountManager.init(this)
+        
         // 验证数据库初始化（使用协程延迟代替线程阻塞）
         applicationScope.launch {
             try {
@@ -88,6 +92,13 @@ class AccountingApplication : Application() {
                 val defaultAccount = accountRepository.getDefaultAccount()
                 if (defaultAccount != null) {
                     Log.d(TAG, "默认账本: ${defaultAccount.name} (ID: ${defaultAccount.id})")
+                }
+                
+                // 加载当前选中的账本
+                AccountManager.loadCurrentAccount()
+                val currentAccount = AccountManager.currentAccount.value
+                if (currentAccount != null) {
+                    Log.d(TAG, "当前账本: ${currentAccount.name} (ID: ${currentAccount.id})")
                 }
                 
             } catch (e: Exception) {

@@ -7,6 +7,7 @@ import com.example.presonalincome_expenditureaccountingsystem.AccountingApplicat
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Account
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Category
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.Record
+import com.example.presonalincome_expenditureaccountingsystem.util.AccountManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,9 +42,12 @@ class RecordViewModel : ViewModel() {
     private val _selectedCategory = MutableStateFlow<Category?>(null)
     val selectedCategory: StateFlow<Category?> = _selectedCategory.asStateFlow()
     
-    // 默认账本
-    private val _defaultAccount = MutableStateFlow<Account?>(null)
-    val defaultAccount: StateFlow<Account?> = _defaultAccount.asStateFlow()
+    // 当前账本
+    private val _currentAccount = MutableStateFlow<Account?>(null)
+    val currentAccount: StateFlow<Account?> = _currentAccount.asStateFlow()
+    
+    // 兼容旧代码
+    val defaultAccount: StateFlow<Account?> = _currentAccount
     
     // 保存状态
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
@@ -51,7 +55,22 @@ class RecordViewModel : ViewModel() {
     
     init {
         loadCategories()
-        loadDefaultAccount()
+        loadCurrentAccount()
+        observeCurrentAccount()
+    }
+    
+    /**
+     * 观察当前账本变化
+     */
+    private fun observeCurrentAccount() {
+        viewModelScope.launch {
+            AccountManager.currentAccount.collect { account ->
+                if (account != null) {
+                    _currentAccount.value = account
+                    Log.d(TAG, "当前账本更新: ${account.name}")
+                }
+            }
+        }
     }
     
     /**
@@ -82,18 +101,22 @@ class RecordViewModel : ViewModel() {
     }
     
     /**
-     * 加载默认账本
+     * 加载当前账本
      */
-    private fun loadDefaultAccount() {
+    private fun loadCurrentAccount() {
         viewModelScope.launch {
             try {
-                val account = accountRepository.getDefaultAccount()
-                _defaultAccount.value = account
-                Log.d(TAG, "加载默认账本: ${account?.name ?: "无"}")
+                // 从 AccountManager 获取当前账本
+                val accountId = AccountManager.getCurrentAccountIdSync()
+                val account = accountRepository.getById(accountId)
+                    ?: accountRepository.getDefaultAccount()
+                
+                _currentAccount.value = account
+                Log.d(TAG, "加载当前账本: ${account?.name ?: "无"}")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e  // 重新抛出协程取消异常
             } catch (e: Exception) {
-                Log.e(TAG, "加载默认账本失败: ${e.message}", e)
+                Log.e(TAG, "加载当前账本失败: ${e.message}", e)
             }
         }
     }
@@ -129,7 +152,7 @@ class RecordViewModel : ViewModel() {
      */
     fun saveRecord(amount: Double, date: Long, note: String) {
         val category = _selectedCategory.value
-        val account = _defaultAccount.value
+        val account = _currentAccount.value
         
         if (category == null) {
             _saveState.value = SaveState.Error("请选择类别")
@@ -137,7 +160,7 @@ class RecordViewModel : ViewModel() {
         }
         
         if (account == null) {
-            _saveState.value = SaveState.Error("账本未初始化")
+            _saveState.value = SaveState.Error("请先选择账本")
             return
         }
         
