@@ -78,6 +78,13 @@ class RecordFragment : Fragment() {
         observeViewModel()
         updateDateDisplay()
     }
+    
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "RecordFragment onResume - 刷新类别数据")
+        // 每次恢复时刷新类别，确保数据库初始化完成后能显示类别
+        viewModel.refreshCategories()
+    }
 
     /**
      * 设置收入/支出切换

@@ -78,25 +78,47 @@ class RecordViewModel : ViewModel() {
      */
     private fun loadCategories() {
         viewModelScope.launch {
-            try {
-                val expense = categoryRepository.getExpenseCategoriesList()
-                val income = categoryRepository.getIncomeCategoriesList()
-                
-                _expenseCategories.value = expense
-                _incomeCategories.value = income
-                
-                // 默认选中第一个支出类别
-                if (expense.isNotEmpty()) {
-                    _selectedCategory.value = expense[0]
+            loadCategoriesInternal()
+        }
+    }
+    
+    /**
+     * 刷新类别列表（公开方法，用于 Fragment 在 onResume 时调用）
+     */
+    fun refreshCategories() {
+        viewModelScope.launch {
+            loadCategoriesInternal()
+        }
+    }
+    
+    /**
+     * 加载类别的内部实现
+     */
+    private suspend fun loadCategoriesInternal() {
+        try {
+            val expense = categoryRepository.getExpenseCategoriesList()
+            val income = categoryRepository.getIncomeCategoriesList()
+            
+            _expenseCategories.value = expense
+            _incomeCategories.value = income
+            
+            // 如果当前没有选中类别，或者选中类别类型与当前类型不匹配，则选中第一个
+            val currentCategory = _selectedCategory.value
+            val currentTypeValue = _currentType.value
+            
+            if (currentCategory == null || currentCategory.type != currentTypeValue) {
+                val categories = if (currentTypeValue == Record.TYPE_EXPENSE) expense else income
+                if (categories.isNotEmpty()) {
+                    _selectedCategory.value = categories[0]
                 }
-                
-                Log.d(TAG, "加载类别完成: 支出${expense.size}个, 收入${income.size}个")
-                
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e  // 重新抛出协程取消异常
-            } catch (e: Exception) {
-                Log.e(TAG, "加载类别失败: ${e.message}", e)
             }
+            
+            Log.d(TAG, "加载类别完成: 支出${expense.size}个, 收入${income.size}个")
+            
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e  // 重新抛出协程取消异常
+        } catch (e: Exception) {
+            Log.e(TAG, "加载类别失败: ${e.message}", e)
         }
     }
     
