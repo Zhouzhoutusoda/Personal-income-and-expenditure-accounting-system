@@ -52,42 +52,6 @@
                     android:orientation="vertical"
                     android:padding="12dp">
 
-                    <!-- 账本选择 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="📚 账本"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_account"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:layout_marginStart="8dp"
-                            android:text="默认账本"
-                            android:textColor="@color/primary"
-                            android:textSize="14sp"
-                            app:icon="@drawable/ic_arrow_drop_down"
-                            app:iconGravity="end"
-                            app:iconSize="18dp"
-                            app:iconTint="@color/primary" />
-
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginVertical="8dp"
-                        android:background="@color/divider" />
-
                     <!-- 时间范围选择 -->
                     <com.google.android.material.chip.ChipGroup
                         android:id="@+id/chip_group_time_range"

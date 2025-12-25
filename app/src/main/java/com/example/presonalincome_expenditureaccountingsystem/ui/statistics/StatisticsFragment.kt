@@ -15,7 +15,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.presonalincome_expenditureaccountingsystem.AccountingApplication
 import com.example.presonalincome_expenditureaccountingsystem.R
-import com.example.presonalincome_expenditureaccountingsystem.data.entity.Account
 import com.example.presonalincome_expenditureaccountingsystem.data.entity.CategoryStatistics
 import com.example.presonalincome_expenditureaccountingsystem.databinding.FragmentStatisticsBinding
 import com.example.presonalincome_expenditureaccountingsystem.ui.adapter.CategoryStatAdapter
@@ -33,8 +32,6 @@ import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.PercentFormatter
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -53,9 +50,6 @@ class StatisticsFragment : Fragment() {
 
     private lateinit var expenseAdapter: CategoryStatAdapter
     private lateinit var incomeAdapter: CategoryStatAdapter
-    
-    // 账本列表
-    private var accounts: List<Account> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -73,78 +67,16 @@ class StatisticsFragment : Fragment() {
 
         setupTimeRangeSelector()
         setupMonthNavigation()
-        setupAccountSelector()
         setupRecyclerViews()
         setupLineChart()
         setupPieCharts()
         observeViewModel()
-        loadAccounts()
     }
 
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "StatisticsFragment onResume - 刷新数据")
         viewModel.refresh()
-    }
-    
-    /**
-     * 加载账本列表
-     */
-    private fun loadAccounts() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                // 安全检查：确保 Application 已初始化
-                if (!AccountingApplication.isInitialized) {
-                    Log.w(TAG, "Application 尚未初始化完成")
-                    return@launch
-                }
-                
-                AccountingApplication.accountRepository.getAllAccounts().collect { accountList ->
-                    // 检查 binding 是否仍然有效
-                    if (_binding == null) return@collect
-                    
-                    accounts = accountList
-                    // 更新当前选中账本显示
-                    val currentAccount = accounts.find { it.id == viewModel.currentAccountId.value }
-                    binding.btnAccount.text = currentAccount?.name ?: "全部账本"
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "加载账本列表失败: ${e.message}", e)
-            }
-        }
-    }
-
-    /**
-     * 设置账本选择器
-     */
-    private fun setupAccountSelector() {
-        binding.btnAccount.setOnClickListener {
-            showAccountPickerDialog()
-        }
-    }
-    
-    /**
-     * 显示账本选择对话框
-     */
-    private fun showAccountPickerDialog() {
-        val accountNames = mutableListOf("全部账本")
-        accountNames.addAll(accounts.map { it.name })
-        
-        val currentIndex = if (viewModel.currentAccountId.value == null) {
-            0
-        } else {
-            accounts.indexOfFirst { it.id == viewModel.currentAccountId.value } + 1
-        }
-        
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("选择账本")
-            .setSingleChoiceItems(accountNames.toTypedArray(), currentIndex) { dialog, which ->
-                val selectedAccountId = if (which == 0) null else accounts[which - 1].id
-                viewModel.setAccount(selectedAccountId)
-                binding.btnAccount.text = accountNames[which]
-                dialog.dismiss()
-            }
-            .show()
     }
 
     /**
